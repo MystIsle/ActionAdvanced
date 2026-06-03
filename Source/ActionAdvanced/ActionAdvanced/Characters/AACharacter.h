@@ -6,13 +6,15 @@
 #include "GameFramework/Character.h"
 #include "AACharacter.generated.h"
 
+class UAACharacterMovementComponent;
+
 UCLASS()
 class ACTIONADVANCED_API AAACharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
-	AAACharacter();
+	AAACharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 public:
 	virtual void BeginPlay() override;
