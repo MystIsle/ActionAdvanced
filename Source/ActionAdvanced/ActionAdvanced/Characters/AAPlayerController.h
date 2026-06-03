@@ -21,7 +21,12 @@ protected:
 	virtual void OnUnPossess() override;
 
 protected:
-	void OnMoveInput(const FInputActionValue& Value);
+	void OnInputMoveTriggered(const FInputActionValue& Value);
+	void OnInputLookTriggered(const FInputActionValue& Value);
+	void OnInputJumpStarted();
+	void OnInputSprint(const FInputActionValue& Value);
+	void OnInputLightAttackStarted();
+	void OnInputHeavyAttackStarted();
 
 protected:
 	UPROPERTY(EditDefaultsOnly)
