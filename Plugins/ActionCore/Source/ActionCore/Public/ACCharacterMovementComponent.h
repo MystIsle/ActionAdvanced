@@ -4,24 +4,29 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "AACharacterMovementComponent.generated.h"
+#include "ACCharacterMovementComponent.generated.h"
 
 UCLASS()
-class ACTIONADVANCED_API UAACharacterMovementComponent : public UCharacterMovementComponent
+class ACTIONCORE_API UACCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
 
 public:
+	virtual FVector ConsumeInputVector() override;
 	virtual FRotator GetDeltaRotation(float DeltaTime) const override;
 
+	void SetMovementLocked(bool bLock);
+	
 protected:
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rotation")
-	float AirRotationScale = 0.3f;
+	float AirRotationScale = 0.1f;
 
 private:
-	// OnMovementModeChanged에서 모드 전환 시 한 번만 갱신되는 회전 스케일 캐시
+	// 여러 액션이 겹쳐 거는 이동 잠금을 참조 카운트로 관리한다.
+	int32 MovementLockedCount = 0;
+	bool bMovementInputLocked = false;
 	float CurrentRotationScale = 1.0f;
 };

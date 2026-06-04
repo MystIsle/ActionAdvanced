@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AACharacter.generated.h"
 
-class UAACharacterMovementComponent;
+class UACActionComponent;
 
 UCLASS()
 class ACTIONADVANCED_API AAACharacter : public ACharacter
@@ -16,9 +16,9 @@ class ACTIONADVANCED_API AAACharacter : public ACharacter
 public:
 	AAACharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-public:
-	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
-
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	UACActionComponent* GetActionComponent() const { return ActionComponent; }
+	
+protected:
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UACActionComponent> ActionComponent;
 };

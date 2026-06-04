@@ -4,7 +4,9 @@
 #include "AAPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine/LocalPlayer.h"
 #include "InputActionValue.h"
+#include "ACActionComponent.h"
 #include "GameFramework/Character.h"
 #include "ActionAdvanced.h"
 
@@ -31,9 +33,15 @@ void AAAPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if (auto EnhancedInputSubsystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+	CachedActionComponent = InPawn ? InPawn->FindComponentByClass<UACActionComponent>() : nullptr;
+
+	// 매핑 컨텍스트는 로컬 컨트롤러 전용 작업이다. 원격/비로컬 컨트롤러에서는 GetLocalPlayer()가 null이므로 가드한다.
+	if (IsLocalPlayerController())
 	{
-		EnhancedInputSubsystem->AddMappingContext(InputMappingContext, 0);
+		if (auto* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			EnhancedInputSubsystem->AddMappingContext(InputMappingContext, 0);
+		}
 	}
 }
 
@@ -41,11 +49,28 @@ void AAAPlayerController::OnUnPossess()
 {
 	Super::OnUnPossess();
 
-	if (auto EnhancedInputSubsystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+	CachedActionComponent = nullptr;
+
+	if (IsLocalPlayerController())
 	{
-		EnhancedInputSubsystem->RemoveMappingContext(InputMappingContext);
+		if (auto* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			EnhancedInputSubsystem->RemoveMappingContext(InputMappingContext);
+		}
 	}
 }
+
+void AAAPlayerController::PlayAction(FGameplayTag ActionTag)
+{
+	if (CachedActionComponent == nullptr || ActionTag.IsValid() == false)
+	{
+		return;
+	}
+
+	
+	CachedActionComponent->PlayAction(ActionTag);
+}
+
 
 void AAAPlayerController::OnInputMoveTriggered(const FInputActionValue& Value)
 {
@@ -92,12 +117,11 @@ void AAAPlayerController::OnInputSprint(const FInputActionValue& Value)
 
 void AAAPlayerController::OnInputLightAttackStarted()
 {
-	// TODO: AACharacter에 공격 진입점 구현 후 연결한다.
-	UE_LOG(LogActionAdvanced, Log, TEXT("OnInputLightAttackStarted - 미구현 스텁"));
+	PlayAction(LightAttackTag);
 }
 
 void AAAPlayerController::OnInputHeavyAttackStarted()
 {
-	// TODO: AACharacter에 공격 진입점 구현 후 연결한다.
-	UE_LOG(LogActionAdvanced, Log, TEXT("OnInputHeavyAttackStarted - 미구현 스텁"));
+	PlayAction(HeavyAttackTag);
 }
+

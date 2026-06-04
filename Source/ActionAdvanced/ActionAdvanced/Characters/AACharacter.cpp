@@ -2,33 +2,14 @@
 
 
 #include "AACharacter.h"
-#include "AACharacterMovementComponent.h"
+#include "ACCharacterMovementComponent.h"
+#include "ACActionComponent.h"
+
 
 AAACharacter::AAACharacter(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAACharacterMovementComponent>(
-		ACharacter::CharacterMovementComponentName))
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UACCharacterMovementComponent>(CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
-}
-
-// Called when the game starts or when spawned
-void AAACharacter::BeginPlay()
-{
-	Super::BeginPlay();
 	
+	ActionComponent = CreateDefaultSubobject<UACActionComponent>(TEXT("ActionComponent"));
 }
-
-// Called every frame
-void AAACharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
-// Called to bind functionality to input
-void AAACharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-}
-

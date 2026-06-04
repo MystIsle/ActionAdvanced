@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/PlayerController.h"
 #include "AAPlayerController.generated.h"
 
 class UInputAction;
 class UInputMappingContext;
+class UACActionComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -21,6 +23,8 @@ protected:
 	virtual void OnUnPossess() override;
 
 protected:
+	void PlayAction(FGameplayTag ActionTag);
+	
 	void OnInputMoveTriggered(const FInputActionValue& Value);
 	void OnInputLookTriggered(const FInputActionValue& Value);
 	void OnInputJumpStarted();
@@ -29,24 +33,33 @@ protected:
 	void OnInputHeavyAttackStarted();
 
 protected:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveInputAction;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> LookInputAction;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> JumpInputAction;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> SprintInputAction;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> LightAttackInputAction;
 	
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> HeavyAttackInputAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Action")
+	FGameplayTag LightAttackTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Action")
+	FGameplayTag HeavyAttackTag;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UACActionComponent> CachedActionComponent;
 };
