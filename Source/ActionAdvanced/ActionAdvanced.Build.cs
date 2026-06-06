@@ -20,10 +20,11 @@ public class ActionAdvanced : ModuleRules
 			"UMG",
 			"Slate",
 			"ActionCore",
-			"GameplayTags"
+			"GameplayTags",
+			"MotionWarping"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange([]);
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ActionAdvanced",

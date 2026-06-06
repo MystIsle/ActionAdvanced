@@ -62,4 +62,6 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UACActionComponent> CachedActionComponent;
+	
+	FRotator ActionRotation;
 };

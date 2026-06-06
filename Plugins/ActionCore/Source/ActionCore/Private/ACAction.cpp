@@ -27,7 +27,7 @@ bool UACAction::CanPlay() const
 	return OwnerComponent->CanPlayAction(this);
 }
 
-UACActionInstance* UACAction::Play()
+UACActionInstance* UACAction::Play(const FRotator& InRotation)
 {
 	if (CanPlay() == false)
 	{
@@ -43,7 +43,7 @@ UACActionInstance* UACAction::Play()
 		return nullptr;
 	}
 	
-	if (ActionInstance->Play() == false)
+	if (ActionInstance->Play(InRotation) == false)
 	{
 		return nullptr;
 	}

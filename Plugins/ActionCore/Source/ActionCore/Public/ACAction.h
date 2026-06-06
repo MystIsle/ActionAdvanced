@@ -19,7 +19,7 @@ public:
 	UACAction();
 	
 	void Initialize(UACActionComponent* InComponent, UACActionDataAsset* InDataAsset);
-	UACActionInstance* Play();
+	UACActionInstance* Play(const FRotator& InRotation);
 	bool CanPlay() const;
 	
 	FGameplayTag GetKey() const { return Key; }

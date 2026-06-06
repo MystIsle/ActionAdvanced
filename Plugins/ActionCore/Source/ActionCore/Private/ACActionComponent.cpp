@@ -74,7 +74,7 @@ void UACActionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
-UACActionInstance* UACActionComponent::PlayAction(FGameplayTag ActionKey)
+UACActionInstance* UACActionComponent::PlayAction(FGameplayTag ActionKey, const FRotator& InRotation)
 {
 	auto Result = Actions.Find(ActionKey);
 	if (Result == nullptr)
@@ -92,7 +92,7 @@ UACActionInstance* UACActionComponent::PlayAction(FGameplayTag ActionKey)
 		return nullptr;
 	}
 
-	return Action->Play();
+	return Action->Play(InRotation);
 }
 
 bool UACActionComponent::CanPlayAction(const UACAction* InAction) const

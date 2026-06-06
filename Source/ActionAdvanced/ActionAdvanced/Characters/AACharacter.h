@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MotionWarpingComponent.h"
 #include "GameFramework/Character.h"
 #include "AACharacter.generated.h"
 
@@ -17,8 +18,12 @@ public:
 	AAACharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	UACActionComponent* GetActionComponent() const { return ActionComponent; }
-	
+	UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
+
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UACActionComponent> ActionComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
 };

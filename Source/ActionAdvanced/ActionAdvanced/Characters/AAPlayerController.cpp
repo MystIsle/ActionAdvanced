@@ -25,8 +25,10 @@ void AAAPlayerController::SetupInputComponent()
 	InputComp->BindAction(JumpInputAction, ETriggerEvent::Started, this, &AAAPlayerController::OnInputJumpStarted);
 	InputComp->BindAction(SprintInputAction, ETriggerEvent::Started, this, &AAAPlayerController::OnInputSprint);
 	InputComp->BindAction(SprintInputAction, ETriggerEvent::Completed, this, &AAAPlayerController::OnInputSprint);
-	InputComp->BindAction(LightAttackInputAction, ETriggerEvent::Started, this, &AAAPlayerController::OnInputLightAttackStarted);
-	InputComp->BindAction(HeavyAttackInputAction, ETriggerEvent::Started, this, &AAAPlayerController::OnInputHeavyAttackStarted);
+	InputComp->BindAction(LightAttackInputAction, ETriggerEvent::Started, this,
+	                      &AAAPlayerController::OnInputLightAttackStarted);
+	InputComp->BindAction(HeavyAttackInputAction, ETriggerEvent::Started, this,
+	                      &AAAPlayerController::OnInputHeavyAttackStarted);
 }
 
 void AAAPlayerController::OnPossess(APawn* InPawn)
@@ -38,11 +40,14 @@ void AAAPlayerController::OnPossess(APawn* InPawn)
 	// 매핑 컨텍스트는 로컬 컨트롤러 전용 작업이다. 원격/비로컬 컨트롤러에서는 GetLocalPlayer()가 null이므로 가드한다.
 	if (IsLocalPlayerController())
 	{
-		if (auto* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		if (auto* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
+			GetLocalPlayer()))
 		{
 			EnhancedInputSubsystem->AddMappingContext(InputMappingContext, 0);
 		}
 	}
+	
+	ActionRotation = InPawn->GetActorRotation();
 }
 
 void AAAPlayerController::OnUnPossess()
@@ -53,7 +58,8 @@ void AAAPlayerController::OnUnPossess()
 
 	if (IsLocalPlayerController())
 	{
-		if (auto* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		if (auto* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
+			GetLocalPlayer()))
 		{
 			EnhancedInputSubsystem->RemoveMappingContext(InputMappingContext);
 		}
@@ -67,10 +73,8 @@ void AAAPlayerController::PlayAction(FGameplayTag ActionTag)
 		return;
 	}
 
-	
-	CachedActionComponent->PlayAction(ActionTag);
+	CachedActionComponent->PlayAction(ActionTag, ActionRotation);
 }
-
 
 void AAAPlayerController::OnInputMoveTriggered(const FInputActionValue& Value)
 {
@@ -87,6 +91,16 @@ void AAAPlayerController::OnInputMoveTriggered(const FInputActionValue& Value)
 
 	ControlledPawn->AddMovementInput(ForwardDir, Axis.Y);
 	ControlledPawn->AddMovementInput(RightDir, Axis.X);
+	
+	if (Axis.IsNearlyZero())
+	{
+		ActionRotation = ControlledPawn->GetActorRotation();
+		return;
+	}
+	
+	const FVector InputDir = FVector(Axis.Y, Axis.X, 0.f).GetSafeNormal();
+	const FVector WorldInputDir = YawRotation.RotateVector(InputDir);
+	ActionRotation = WorldInputDir.Rotation();
 }
 
 void AAAPlayerController::OnInputLookTriggered(const FInputActionValue& Value)
@@ -112,7 +126,8 @@ void AAAPlayerController::OnInputSprint(const FInputActionValue& Value)
 	const bool bWantsToSprint = Value.Get<bool>();
 
 	// TODO: AACharacter에 스프린트(MaxWalkSpeed 토글) 구현 후 연결한다.
-	UE_LOG(LogActionAdvanced, Log, TEXT("OnInputSprint - 미구현 스텁 (%s)"), bWantsToSprint ? TEXT("press") : TEXT("release"));
+	UE_LOG(LogActionAdvanced, Log, TEXT("OnInputSprint - 미구현 스텁 (%s)"),
+	       bWantsToSprint ? TEXT("press") : TEXT("release"));
 }
 
 void AAAPlayerController::OnInputLightAttackStarted()
@@ -124,4 +139,3 @@ void AAAPlayerController::OnInputHeavyAttackStarted()
 {
 	PlayAction(HeavyAttackTag);
 }
-

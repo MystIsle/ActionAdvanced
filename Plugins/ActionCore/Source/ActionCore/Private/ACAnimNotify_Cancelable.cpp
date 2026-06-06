@@ -13,7 +13,7 @@ UACAnimNotify_Cancelable::UACAnimNotify_Cancelable()
 
 FString UACAnimNotify_Cancelable::GetNotifyName_Implementation() const
 {
-	return TEXT("캔슬");
+	return TEXT("액션 캔슬 가능");
 }
 
 void UACAnimNotify_Cancelable::BranchingPointNotify(FBranchingPointNotifyPayload& BranchingPointPayload)

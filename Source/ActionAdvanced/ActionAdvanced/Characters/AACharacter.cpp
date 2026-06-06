@@ -12,4 +12,5 @@ AAACharacter::AAACharacter(const FObjectInitializer& ObjectInitializer)
 	PrimaryActorTick.bCanEverTick = true;
 	
 	ActionComponent = CreateDefaultSubobject<UACActionComponent>(TEXT("ActionComponent"));
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 }

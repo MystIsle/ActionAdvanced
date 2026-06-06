@@ -31,7 +31,7 @@ class ACTIONCORE_API UACActionInstance : public UObject
 
 public:
 	void Initialize(UACAction* InAction);
-	bool Play();
+	bool Play(const FRotator& InRotation);
 	void Stop();
 
 	EACActionInstanceState GetState() const { return State; }

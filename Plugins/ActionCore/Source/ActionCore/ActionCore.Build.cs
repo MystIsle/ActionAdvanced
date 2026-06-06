@@ -18,7 +18,7 @@ public class ActionCore : ModuleRules
 			]
 		);
 
-		PrivateDependencyModuleNames.AddRange([]);
+		PrivateDependencyModuleNames.AddRange(["MotionWarping"]);
 
 		PrivateIncludePaths.AddRange([ModuleDirectory]);
 	}
