@@ -44,7 +44,10 @@ private:
 	void SetState(EACActionInstanceState NewState);
 	void StopInternal(bool bNeedAnimStop);
 	void SetMovementLocked(bool bLock);
-	FRotator ResolveFacingRotation(const FRotator& InputRotation) const;
+	FRotator DetermineFacingRotation(const FRotator& InputRotation) const;
+
+	// 오토타게팅 러시 워프 목표(위치+회전)를 계산한다. 타겟이 없거나 거리/각도 밖이면 false(회전 폴백).
+	bool TryLungeWarp(const FRotator& InRotation, FVector& OutLocation, FRotator& OutRotation) const;
 
 	void OnMontageBlendingOutStarted(UAnimMontage* AnimMontage, bool bInterrupted);
 	void OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);

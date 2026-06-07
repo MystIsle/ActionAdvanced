@@ -8,6 +8,7 @@
 #include "GenericTeamAgentInterface.h"
 #include "AAPlayerController.generated.h"
 
+struct FInputActionInstance;
 class UInputAction;
 class UInputMappingContext;
 class UACActionComponent;
@@ -29,7 +30,7 @@ protected:
 protected:
 	void PlayAction(FGameplayTag ActionTag);
 	
-	void OnInputMoveTriggered(const FInputActionValue& Value);
+	void OnInputMove(const FInputActionInstance& Instance);
 	void OnInputLookTriggered(const FInputActionValue& Value);
 	void OnInputJumpStarted();
 	void OnInputSprint(const FInputActionValue& Value);

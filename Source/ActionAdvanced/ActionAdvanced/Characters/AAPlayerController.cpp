@@ -20,7 +20,8 @@ void AAAPlayerController::SetupInputComponent()
 		return;
 	}
 
-	InputComp->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &AAAPlayerController::OnInputMoveTriggered);
+	InputComp->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &AAAPlayerController::OnInputMove);
+	InputComp->BindAction(MoveInputAction, ETriggerEvent::Completed, this, &AAAPlayerController::OnInputMove);
 	InputComp->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &AAAPlayerController::OnInputLookTriggered);
 	InputComp->BindAction(JumpInputAction, ETriggerEvent::Started, this, &AAAPlayerController::OnInputJumpStarted);
 	InputComp->BindAction(SprintInputAction, ETriggerEvent::Started, this, &AAAPlayerController::OnInputSprint);
@@ -85,7 +86,7 @@ void AAAPlayerController::PlayAction(FGameplayTag ActionTag)
 	CachedActionComponent->PlayAction(ActionTag, ActionRotation);
 }
 
-void AAAPlayerController::OnInputMoveTriggered(const FInputActionValue& Value)
+void AAAPlayerController::OnInputMove(const FInputActionInstance& Instance)
 {
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn == nullptr)
@@ -93,7 +94,13 @@ void AAAPlayerController::OnInputMoveTriggered(const FInputActionValue& Value)
 		return;
 	}
 
-	const FVector2D Axis = Value.Get<FVector2D>();
+	if (Instance.GetTriggerEvent() != ETriggerEvent::Triggered)
+	{
+		ActionRotation = ControlledPawn->GetActorRotation();
+		return;
+	}
+
+	const FVector2D Axis = Instance.GetValue().Get<FVector2D>();
 	const FRotator YawRotation(0.0f, GetControlRotation().Yaw, 0.0f);
 	const FVector ForwardDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 	const FVector RightDir = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);

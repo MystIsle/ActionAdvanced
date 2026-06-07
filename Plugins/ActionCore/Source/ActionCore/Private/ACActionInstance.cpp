@@ -13,7 +13,9 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
+#include "ACTargetingLibrary.h"
 
 void UACActionInstance::Initialize(UACAction* InAction)
 {
@@ -79,16 +81,21 @@ bool UACActionInstance::Play(const FRotator& InRotation)
 	MontageInstance->OnMontageBlendingOutStarted.BindUObject(this, &ThisClass::OnMontageBlendingOutStarted);
 	MontageInstance->OnMontageEnded.BindUObject(this, &ThisClass::OnMontageEnded);
 
-	
-	FRotator WarpRotation = ResolveFacingRotation(InRotation);
-	
+
+	// 워프 목표: 오토타게팅 러시가 잡히면 타겟 앞 지점, 아니면 제자리 + 회전(폴백).
+	FVector WarpLocation;
+	FRotator WarpRotation;
+	const bool bLunging = TryLungeWarp(InRotation, WarpLocation, WarpRotation);
+	if (bLunging == false)
+	{
+		WarpLocation = Owner->GetActorLocation();
+		WarpRotation = DetermineFacingRotation(InRotation);
+	}
+
 	if (const auto MotionWarpingComp = Owner->GetComponentByClass<UMotionWarpingComponent>())
 	{
 		static const FName WarpTargetName("Target");
-		MotionWarpingComp->AddOrUpdateWarpTargetFromLocationAndRotation(WarpTargetName,
-		                                                                Owner->GetActorLocation(),
-		                                                                WarpRotation
-		);
+		MotionWarpingComp->AddOrUpdateWarpTargetFromLocationAndRotation(WarpTargetName, WarpLocation, WarpRotation);
 	}
 	else
 	{
@@ -96,7 +103,8 @@ bool UACActionInstance::Play(const FRotator& InRotation)
 		       *GetName(), *GetNameSafe(Owner), *GetNameSafe(DataAsset->AnimMontage));
 	}
 
-	if (CharacterMovementComponent->IsFalling())
+	// 공중에선 루트모션을 끄되, 러시(데이터에셋 활성 + 타겟 찾음)는 공중에서도 워프가 먹도록 유지.
+	if (CharacterMovementComponent->IsFalling() && bLunging == false)
 	{
 		MontageInstance->PushDisableRootMotion();
 	}
@@ -195,7 +203,7 @@ void UACActionInstance::SetMovementLocked(bool bLock)
 	}
 }
 
-FRotator UACActionInstance::ResolveFacingRotation(const FRotator& InputRotation) const
+FRotator UACActionInstance::DetermineFacingRotation(const FRotator& InputRotation) const
 {
 	switch (DataAsset->RotationDirection)
 	{
@@ -206,6 +214,48 @@ FRotator UACActionInstance::ResolveFacingRotation(const FRotator& InputRotation)
 	default:
 		return Owner->GetActorRotation();
 	}
+}
+
+bool UACActionInstance::TryLungeWarp(const FRotator& InRotation, FVector& OutLocation, FRotator& OutRotation) const
+{
+	if (DataAsset->bAutoTargetLunge == false)
+	{
+		return false;
+	}
+
+	AActor* Target = UACTargetingLibrary::FindBestTarget(
+		Owner, DataAsset->LungeRange, DataAsset->LungeHalfAngle, InRotation.Vector());
+	if (Target == nullptr)
+	{
+		return false;
+	}
+
+	const FVector TargetLocation = Target->GetActorLocation();
+	const FVector OwnerLocation = Owner->GetActorLocation();
+
+	const FVector2D Distance2D = FVector2D(TargetLocation - OwnerLocation);
+	const float Length = Distance2D.Size();
+	if (Length <= KINDA_SMALL_NUMBER)
+	{
+		return false;
+	}
+	const FVector ToTargetDirection = FVector(Distance2D, 0.f) / Length;
+
+	// 정지 거리 = 시전자 캡슐R + 타겟 캡슐R + 오프셋.
+	const float CasterRadius = Owner->GetCapsuleComponent() ? Owner->GetCapsuleComponent()->GetScaledCapsuleRadius() : 0.f;
+	float TargetRadius = 0.f;
+	if (const ACharacter* TargetChar = Cast<ACharacter>(Target))
+	{
+		TargetRadius = TargetChar->GetCapsuleComponent()->GetScaledCapsuleRadius();
+	}
+	
+	const float Standoff = CasterRadius + TargetRadius + DataAsset->LungeOffset;
+
+	// 이미 standoff 안이면 뒤로 끌리지 않게 회전만.
+	OutLocation = (Length <= Standoff) ? OwnerLocation : TargetLocation - ToTargetDirection * Standoff;
+	OutLocation.Z = OwnerLocation.Z; //에디터에서는 모션워핑의 Z값은 무시되도록 설정되어 있습니다.
+	OutRotation = ToTargetDirection.Rotation();
+	return true;
 }
 
 void UACActionInstance::OnMontageBlendingOutStarted(UAnimMontage* AnimMontage, bool bInterrupted)
