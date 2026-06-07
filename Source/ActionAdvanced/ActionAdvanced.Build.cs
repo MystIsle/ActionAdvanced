@@ -28,6 +28,8 @@ public class ActionAdvanced : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ActionAdvanced",
+			// 활성 코드 서브디렉터리를 include 루트로 추가해, 폴더 상대 include("Team/AATeamID.h" 등)를 허용한다.
+			"ActionAdvanced/ActionAdvanced",
 			"ActionAdvanced/Variant_Platforming",
 			"ActionAdvanced/Variant_Platforming/Animation",
 			"ActionAdvanced/Variant_Combat",

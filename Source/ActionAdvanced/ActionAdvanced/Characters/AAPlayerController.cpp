@@ -66,6 +66,15 @@ void AAAPlayerController::OnUnPossess()
 	}
 }
 
+FGenericTeamId AAAPlayerController::GetGenericTeamId() const
+{
+	if (const IGenericTeamAgentInterface* TeamPawn = Cast<IGenericTeamAgentInterface>(GetPawn()))
+	{
+		return TeamPawn->GetGenericTeamId();
+	}
+	return FGenericTeamId::NoTeam;
+}
+
 void AAAPlayerController::PlayAction(FGameplayTag ActionTag)
 {
 	if (CachedActionComponent == nullptr || ActionTag.IsValid() == false)

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/PlayerController.h"
+#include "GenericTeamAgentInterface.h"
 #include "AAPlayerController.generated.h"
 
 class UInputAction;
@@ -13,9 +14,12 @@ class UACActionComponent;
 struct FInputActionValue;
 
 UCLASS()
-class ACTIONADVANCED_API AAAPlayerController : public APlayerController
+class ACTIONADVANCED_API AAAPlayerController : public APlayerController, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
+
+public:
+	virtual FGenericTeamId GetGenericTeamId() const override;
 
 protected:
 	virtual void SetupInputComponent() override;

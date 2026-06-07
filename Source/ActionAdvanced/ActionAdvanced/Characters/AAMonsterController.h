@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "GenericTeamAgentInterface.h"
 #include "AAMonsterController.generated.h"
 
 UCLASS()
@@ -12,14 +13,7 @@ class ACTIONADVANCED_API AAAMonsterController : public AAIController
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AAAMonsterController();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	virtual FGenericTeamId GetGenericTeamId() const override;
 };
