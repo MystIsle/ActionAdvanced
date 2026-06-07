@@ -44,6 +44,7 @@ private:
 	void SetState(EACActionInstanceState NewState);
 	void StopInternal(bool bNeedAnimStop);
 	void SetMovementLocked(bool bLock);
+	FRotator ResolveFacingRotation(const FRotator& InputRotation) const;
 
 	void OnMontageBlendingOutStarted(UAnimMontage* AnimMontage, bool bInterrupted);
 	void OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);

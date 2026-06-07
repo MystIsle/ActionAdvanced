@@ -46,7 +46,7 @@ void AAAPlayerController::OnPossess(APawn* InPawn)
 			EnhancedInputSubsystem->AddMappingContext(InputMappingContext, 0);
 		}
 	}
-	
+
 	ActionRotation = InPawn->GetActorRotation();
 }
 
@@ -91,13 +91,13 @@ void AAAPlayerController::OnInputMoveTriggered(const FInputActionValue& Value)
 
 	ControlledPawn->AddMovementInput(ForwardDir, Axis.Y);
 	ControlledPawn->AddMovementInput(RightDir, Axis.X);
-	
+
 	if (Axis.IsNearlyZero())
 	{
 		ActionRotation = ControlledPawn->GetActorRotation();
 		return;
 	}
-	
+
 	const FVector InputDir = FVector(Axis.Y, Axis.X, 0.f).GetSafeNormal();
 	const FVector WorldInputDir = YawRotation.RotateVector(InputDir);
 	ActionRotation = WorldInputDir.Rotation();

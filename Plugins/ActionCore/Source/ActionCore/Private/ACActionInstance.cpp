@@ -79,12 +79,15 @@ bool UACActionInstance::Play(const FRotator& InRotation)
 	MontageInstance->OnMontageBlendingOutStarted.BindUObject(this, &ThisClass::OnMontageBlendingOutStarted);
 	MontageInstance->OnMontageEnded.BindUObject(this, &ThisClass::OnMontageEnded);
 
+	
+	FRotator WarpRotation = ResolveFacingRotation(InRotation);
+	
 	if (const auto MotionWarpingComp = Owner->GetComponentByClass<UMotionWarpingComponent>())
 	{
 		static const FName WarpTargetName("Target");
 		MotionWarpingComp->AddOrUpdateWarpTargetFromLocationAndRotation(WarpTargetName,
 		                                                                Owner->GetActorLocation(),
-		                                                                InRotation
+		                                                                WarpRotation
 		);
 	}
 	else
@@ -189,6 +192,19 @@ void UACActionInstance::SetMovementLocked(bool bLock)
 	if (CharacterMovementComponent)
 	{
 		CharacterMovementComponent->SetMovementLocked(bMovementLocked);
+	}
+}
+
+FRotator UACActionInstance::ResolveFacingRotation(const FRotator& InputRotation) const
+{
+	switch (DataAsset->RotationDirection)
+	{
+	case EACActionDirection::Input:
+		return InputRotation;
+	case EACActionDirection::Control:
+		return FRotator(0.f, Owner->GetControlRotation().Yaw, 0.f);
+	default:
+		return Owner->GetActorRotation();
 	}
 }
 
