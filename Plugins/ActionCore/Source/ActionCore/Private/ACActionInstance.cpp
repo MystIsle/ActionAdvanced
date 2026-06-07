@@ -16,6 +16,11 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "ACTargetingLibrary.h"
+#include "GenericTeamAgentInterface.h"
+
+#if ENABLE_DRAW_DEBUG
+#include "DrawDebugHelpers.h"
+#endif
 
 void UACActionInstance::Initialize(UACAction* InAction)
 {
@@ -52,6 +57,8 @@ void UACActionInstance::Initialize(UACAction* InAction)
 	{
 		return;
 	}
+
+	MeleeTraceComponent = Owner->FindComponentByClass<UMeleeTraceComponent>();
 
 	SetState(EACActionInstanceState::Ready);
 }
@@ -139,6 +146,45 @@ void UACActionInstance::MarkCancelable()
 	SetMovementLocked(false);
 }
 
+void UACActionInstance::BeginHitDetection()
+{
+	if (bHitDetecting || MeleeTraceComponent == nullptr)
+	{
+		return;
+	}
+
+	bHitDetecting = true;
+	MeleeTraceComponent->OnTraceHit.AddDynamic(this, &ThisClass::OnMeleeTraceHit);
+}
+
+void UACActionInstance::EndHitDetection()
+{
+	if (bHitDetecting == false || MeleeTraceComponent == nullptr)
+	{
+		return;
+	}
+
+	bHitDetecting = false;
+	MeleeTraceComponent->OnTraceHit.RemoveDynamic(this, &ThisClass::OnMeleeTraceHit);
+}
+
+void UACActionInstance::OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor* HitActor, const FVector& HitLocation,
+                                        const FVector& HitNormal, FName HitBoneName, FMeleeTraceInstanceHandle TraceHandle)
+{
+	if (HitActor == nullptr || FGenericTeamId::GetAttitude(Owner, HitActor) != ETeamAttitude::Hostile)
+	{
+		return;
+	}
+
+	UE_LOG(LogActionCore, Log, TEXT("[Melee] Hit %s (bone %s)"), *GetNameSafe(HitActor), *HitBoneName.ToString());
+
+#if ENABLE_DRAW_DEBUG
+	DrawDebugSphere(Owner->GetWorld(), HitLocation, 12.f, 8, FColor::Red, false, 1.5f);
+#endif
+
+	// TODO: 경직/넉백 — 데미지·히트스톱·넉백을 DataAsset 값으로 여기서 적용.
+}
+
 void UACActionInstance::StopInternal(bool bNeedAnimStop)
 {
 	if (IsPlaying() == false)
@@ -155,6 +201,7 @@ void UACActionInstance::StopInternal(bool bNeedAnimStop)
 	}
 
 	SetMovementLocked(false);
+	EndHitDetection();
 
 	if (AnimInstance == nullptr)
 	{

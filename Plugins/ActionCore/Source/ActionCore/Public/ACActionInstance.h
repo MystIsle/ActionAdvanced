@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "MeleeTraceComponent.h"
 #include "ACActionInstance.generated.h"
 
 class UACCharacterMovementComponent;
@@ -34,6 +35,9 @@ public:
 	bool Play(const FRotator& InRotation);
 	void Stop();
 
+	void BeginHitDetection();
+	void EndHitDetection();
+
 	EACActionInstanceState GetState() const { return State; }
 	int32 GetMontageInstanceID() const { return MontageInstanceID; }
 	bool IsPlaying() const { return State == EACActionInstanceState::Playing || State == EACActionInstanceState::BlendingOut; }
@@ -51,6 +55,10 @@ private:
 
 	void OnMontageBlendingOutStarted(UAnimMontage* AnimMontage, bool bInterrupted);
 	void OnMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
+
+	UFUNCTION()
+	void OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor* HitActor, const FVector& HitLocation,
+	                     const FVector& HitNormal, FName HitBoneName, FMeleeTraceInstanceHandle TraceHandle);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UACAction> Source;
@@ -70,8 +78,12 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UAnimInstance> AnimInstance;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UMeleeTraceComponent> MeleeTraceComponent;
+
 	EACActionInstanceState State = EACActionInstanceState::None;
 	int32 MontageInstanceID = INDEX_NONE;
 	bool bCancelable = false;
 	bool bMovementLocked = false;
+	bool bHitDetecting = false;
 };

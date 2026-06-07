@@ -1,0 +1,3 @@
+[submodule "Plugins/MeleeTrace"]
+	path = Plugins/MeleeTrace
+	url = https://github.com/rlewicki/MeleeTrace.git

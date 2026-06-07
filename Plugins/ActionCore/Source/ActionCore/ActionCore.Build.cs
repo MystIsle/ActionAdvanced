@@ -14,7 +14,8 @@ public class ActionCore : ModuleRules
 				"Core",
 				"CoreUObject",
 				"Engine",
-				"GameplayTags"
+				"GameplayTags",
+				"MeleeTrace"
 			]
 		);
 

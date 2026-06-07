@@ -21,7 +21,8 @@ public class ActionAdvanced : ModuleRules
 			"Slate",
 			"ActionCore",
 			"GameplayTags",
-			"MotionWarping"
+			"MotionWarping",
+			"MeleeTrace"
 		});
 
 		PrivateDependencyModuleNames.AddRange([]);

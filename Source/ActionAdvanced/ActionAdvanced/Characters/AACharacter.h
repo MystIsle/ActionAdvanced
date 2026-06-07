@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "MotionWarpingComponent.h"
+#include "MeleeTraceComponent.h"
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
 #include "Team/AATeamID.h"
 #include "AACharacter.generated.h"
 
 class UACActionComponent;
+class UMeleeTraceComponent;
 
 UCLASS()
 class ACTIONADVANCED_API AAACharacter : public ACharacter, public IGenericTeamAgentInterface
@@ -21,12 +23,11 @@ public:
 
 	UACActionComponent* GetActionComponent() const { return ActionComponent; }
 	UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
+	UMeleeTraceComponent* GetMeleeTraceComponent() const { return MeleeTraceComponent; }
 
 	EAATeamID GetTeamID() const { return TeamID; }
 
-	//~ IGenericTeamAgentInterface
 	virtual FGenericTeamId GetGenericTeamId() const override { return static_cast<uint8>(TeamID); }
-	//~ End IGenericTeamAgentInterface
 
 protected:
 	UPROPERTY(VisibleAnywhere)
@@ -34,6 +35,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+	
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UMeleeTraceComponent> MeleeTraceComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Team")
 	EAATeamID TeamID = EAATeamID::NoTeam;
