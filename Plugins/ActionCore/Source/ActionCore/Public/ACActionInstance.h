@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "MeleeTraceComponent.h"
+#include "ACHitEffect.h"
 #include "ACActionInstance.generated.h"
 
 class UACCharacterMovementComponent;
@@ -35,7 +36,7 @@ public:
 	bool Play(const FRotator& InRotation);
 	void Stop();
 
-	void BeginHitDetection();
+	void BeginHitDetection(const FACHitEffect& InHitEffect);
 	void EndHitDetection();
 
 	EACActionInstanceState GetState() const { return State; }
@@ -86,4 +87,5 @@ private:
 	bool bCancelable = false;
 	bool bMovementLocked = false;
 	bool bHitDetecting = false;
+	FACHitEffect CurrentHitEffect;
 };

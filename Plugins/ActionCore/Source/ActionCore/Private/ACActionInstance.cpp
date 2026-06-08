@@ -17,6 +17,7 @@
 #include "GameFramework/Character.h"
 #include "ACTargetingLibrary.h"
 #include "GenericTeamAgentInterface.h"
+#include "ACHitReactionComponent.h"
 
 #if ENABLE_DRAW_DEBUG
 #include "DrawDebugHelpers.h"
@@ -146,13 +147,14 @@ void UACActionInstance::MarkCancelable()
 	SetMovementLocked(false);
 }
 
-void UACActionInstance::BeginHitDetection()
+void UACActionInstance::BeginHitDetection(const FACHitEffect& InHitEffect)
 {
 	if (bHitDetecting || MeleeTraceComponent == nullptr)
 	{
 		return;
 	}
 
+	CurrentHitEffect = InHitEffect;
 	bHitDetecting = true;
 	MeleeTraceComponent->OnTraceHit.AddDynamic(this, &ThisClass::OnMeleeTraceHit);
 }
@@ -178,11 +180,18 @@ void UACActionInstance::OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor*
 
 	UE_LOG(LogActionCore, Log, TEXT("[Melee] Hit %s (bone %s)"), *GetNameSafe(HitActor), *HitBoneName.ToString());
 
-#if ENABLE_DRAW_DEBUG
-	DrawDebugSphere(Owner->GetWorld(), HitLocation, 12.f, 8, FColor::Red, false, 1.5f);
-#endif
+	//NOTE: 현재 편의상 넉백 방향은, 한방향으로만.
+	const FVector Direction = Owner->GetActorForwardVector();
 
-	// TODO: 경직/넉백 — 데미지·히트스톱·넉백을 DataAsset 값으로 여기서 적용.
+	if (UACHitReactionComponent* Reaction = HitActor->FindComponentByClass<UACHitReactionComponent>())
+	{
+		Reaction->PlayReact(CurrentHitEffect, Direction);
+	}
+
+	if (UACHitReactionComponent* SelfReaction = Owner->FindComponentByClass<UACHitReactionComponent>())
+	{
+		SelfReaction->RequestHitStop(CurrentHitEffect.HitStopPlayRate, CurrentHitEffect.HitStopDuration);
+	}
 }
 
 void UACActionInstance::StopInternal(bool bNeedAnimStop)

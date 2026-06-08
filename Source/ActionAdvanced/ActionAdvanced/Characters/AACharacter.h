@@ -12,6 +12,7 @@
 
 class UACActionComponent;
 class UMeleeTraceComponent;
+class UACHitReactionComponent;
 
 UCLASS()
 class ACTIONADVANCED_API AAACharacter : public ACharacter, public IGenericTeamAgentInterface
@@ -38,6 +39,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UMeleeTraceComponent> MeleeTraceComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UACHitReactionComponent> HitReactionComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Team")
 	EAATeamID TeamID = EAATeamID::NoTeam;

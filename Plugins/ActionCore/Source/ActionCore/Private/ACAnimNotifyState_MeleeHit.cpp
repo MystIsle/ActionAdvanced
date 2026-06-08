@@ -18,7 +18,7 @@ void UACAnimNotifyState_MeleeHit::BranchingPointNotifyBegin(FBranchingPointNotif
 	const FACActionContext Context(BranchingPointPayload);
 	if (Context.IsValid())
 	{
-		Context.Instance->BeginHitDetection();
+		Context.Instance->BeginHitDetection(HitEffect);
 	}
 }
 

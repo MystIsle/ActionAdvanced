@@ -5,6 +5,7 @@
 #include "ACCharacterMovementComponent.h"
 #include "ACActionComponent.h"
 #include "MeleeTraceComponent.h"
+#include "ACHitReactionComponent.h"
 
 
 AAACharacter::AAACharacter(const FObjectInitializer& ObjectInitializer)
@@ -15,4 +16,5 @@ AAACharacter::AAACharacter(const FObjectInitializer& ObjectInitializer)
 	ActionComponent = CreateDefaultSubobject<UACActionComponent>(TEXT("ActionComponent"));
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 	MeleeTraceComponent = CreateDefaultSubobject<UMeleeTraceComponent>(TEXT("MeleeTrace"));
+	HitReactionComponent = CreateDefaultSubobject<UACHitReactionComponent>(TEXT("HitReaction"));
 }

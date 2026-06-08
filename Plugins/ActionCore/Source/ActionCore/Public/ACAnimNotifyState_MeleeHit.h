@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AnimNotifyState_MeleeTrace.h"
+#include "ACHitEffect.h"
 #include "ACAnimNotifyState_MeleeHit.generated.h"
 
 UCLASS(DisplayName = "AC Melee Hit")
@@ -12,6 +13,9 @@ class ACTIONCORE_API UACAnimNotifyState_MeleeHit : public UAnimNotifyState_Melee
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere, Category = "HitReaction")
+	FACHitEffect HitEffect;
+
 	UACAnimNotifyState_MeleeHit();
 
 	virtual void BranchingPointNotifyBegin(FBranchingPointNotifyPayload& BranchingPointPayload) override;
