@@ -73,3 +73,12 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+.idea
+.omc
+
+# Third-party dev tooling: Monolith MCP plugin — cloned separately, has its own
+# git repo + auto-updater, so it's managed out-of-band rather than tracked here.
+Plugins/Monolith/
+
+# Local MCP client config — points at the locally-built Monolith proxy binary.
+.mcp.json
