@@ -25,8 +25,7 @@
 
 UACHitReactionComponent::UACHitReactionComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UACHitReactionComponent::BeginPlay()
@@ -219,28 +218,6 @@ void UACHitReactionComponent::OnHitStopFinished()
 	RestoreFXTimeScale();
 }
 
-void UACHitReactionComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                            FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (bFlashing == false || FlashMID == nullptr)
-	{
-		return;
-	}
-
-	FlashElapsed += DeltaTime; // 실시간(히트스톱 비동기화)
-	const float T = FlashDuration > 0.f ? FlashElapsed / FlashDuration : 1.f;
-	if (T >= 1.f)
-	{
-		EndHitFlash();
-		return;
-	}
-
-	const float Alpha = FlashCurve ? FlashCurve->GetFloatValue(T) : (1.f - T);
-	FlashMID->SetScalarParameterValue(TEXT("FlashAmount"), Alpha * FlashIntensity);
-}
-
 void UACHitReactionComponent::StartHitFlash()
 {
 	if (OwnerCharacter == nullptr)
@@ -249,7 +226,7 @@ void UACHitReactionComponent::StartHitFlash()
 	}
 
 	const UACCombatFeelSettings* Settings = GetDefault<UACCombatFeelSettings>();
-	if (Settings == nullptr || Settings->bEnableHitFlash == false)
+	if (Settings == nullptr || Settings->bEnableHitFlash == false || Settings->FlashDuration <= 0.f)
 	{
 		return;
 	}
@@ -266,36 +243,36 @@ void UACHitReactionComponent::StartHitFlash()
 		return;
 	}
 
-	FlashMID = UMaterialInstanceDynamic::Create(FlashMaterial, this);
+	// MID는 1회 생성 후 재사용(매 피격 Create 회피). 소스 머티리얼이 바뀌면 재생성.
+	if (FlashMID == nullptr || FlashMID->Parent != FlashMaterial)
+	{
+		FlashMID = UMaterialInstanceDynamic::Create(FlashMaterial, this);
+	}
+
+	// falloff는 머티리얼이 (Time - FlashStartTime)/FlashDuration으로 자체 계산 → 틱 불필요.
 	FlashMID->SetVectorParameterValue(TEXT("FlashColor"), Settings->FlashColor);
+	FlashMID->SetScalarParameterValue(TEXT("FlashStartTime"), GetWorld()->GetTimeSeconds());
+	FlashMID->SetScalarParameterValue(TEXT("FlashDuration"), Settings->FlashDuration);
+	FlashMID->SetScalarParameterValue(TEXT("FlashIntensity"), Settings->FlashIntensity);
+	FlashMID->SetScalarParameterValue(TEXT("FlashExponent"), Settings->FlashExponent);
 	Mesh->SetOverlayMaterial(FlashMID);
 
-	FlashElapsed = 0.f;
-	FlashDuration = Settings->FlashDuration;
-	FlashIntensity = Settings->FlashIntensity;
-	FlashCurve = Settings->FlashCurve.LoadSynchronous();
-	bFlashing = true;
-
-	// 첫 프레임부터 피크가 보이도록 즉시 1회 적용.
-	const float Alpha = FlashCurve ? FlashCurve->GetFloatValue(0.f) : 1.f;
-	FlashMID->SetScalarParameterValue(TEXT("FlashAmount"), Alpha * FlashIntensity);
-
-	SetComponentTickEnabled(true);
+	// 감쇠 종료 시 오버레이 해제(재피격 시 SetTimer가 리셋 — 마지막이 이김).
+	OwnerCharacter->GetWorldTimerManager().SetTimer(
+		FlashTimer, this, &UACHitReactionComponent::EndHitFlash, Settings->FlashDuration, false);
 }
 
 void UACHitReactionComponent::EndHitFlash()
 {
 	if (OwnerCharacter)
 	{
+		OwnerCharacter->GetWorldTimerManager().ClearTimer(FlashTimer);
 		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
 		{
 			Mesh->SetOverlayMaterial(nullptr);
 		}
 	}
-	FlashMID = nullptr;
-	FlashCurve = nullptr;
-	bFlashing = false;
-	SetComponentTickEnabled(false);
+	// FlashMID는 보존(재사용). 다음 StartHitFlash에서 갱신.
 }
 
 void UACHitReactionComponent::RestoreFXTimeScale()

@@ -24,7 +24,6 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	void PlayReact(const FACHitEffect& Effect, const FVector& Direction, const FVector& HitLocation);
 	void RequestHitStop(float Scale, float Duration, int32 MontageInstanceID = INDEX_NONE);
@@ -64,15 +63,9 @@ private:
 	int32 HitMontageIndex = 0;
 	bool bReacting = false;
 
-	// 히트 점멸(전역 UACCombatFeelSettings 구동). 플래시 동안만 틱 ON.
+	// 히트 점멸(전역 UACCombatFeelSettings 구동). falloff는 머티리얼 Time 기반 자체 계산.
 	UPROPERTY(Transient)
 	TObjectPtr<UMaterialInstanceDynamic> FlashMID;
 
-	UPROPERTY(Transient)
-	TObjectPtr<UCurveFloat> FlashCurve;
-
-	float FlashElapsed = 0.f;
-	float FlashDuration = 0.f;
-	float FlashIntensity = 1.f;
-	bool bFlashing = false;
+	FTimerHandle FlashTimer;
 };

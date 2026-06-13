@@ -7,7 +7,6 @@
 #include "ACCombatFeelSettings.generated.h"
 
 class UMaterialInterface;
-class UCurveFloat;
 
 // 타격감 연출 전역 설정. Project Settings > Game > "Action Core - Combat Feel".
 UCLASS(config = Game, defaultconfig, meta = (DisplayName = "Action Core - Combat Feel"))
@@ -38,7 +37,7 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Hit Flash", meta = (ClampMin = "0.0"))
 	float FlashDuration = 0.1f;
 
-	// 감쇠 곡선(X=0~1 정규화 시간, Y=0~1 강도). null이면 선형(1-t) falloff.
-	UPROPERTY(EditAnywhere, config, Category = "Hit Flash")
-	TSoftObjectPtr<UCurveFloat> FlashCurve;
+	// 감쇠 지수. falloff = pow(1-t, Exponent). 클수록 빠르게 꺼짐(1=선형).
+	UPROPERTY(EditAnywhere, config, Category = "Hit Flash", meta = (ClampMin = "0.0"))
+	float FlashExponent = 2.0f;
 };
