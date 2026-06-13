@@ -17,6 +17,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/PlayerController.h"
 #include "ACTargetingLibrary.h"
 #include "GenericTeamAgentInterface.h"
 #include "ACHitReactionComponent.h"
@@ -201,6 +202,17 @@ void UACActionInstance::OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor*
 	if (UACHitReactionComponent* SelfReaction = Owner->FindComponentByClass<UACHitReactionComponent>())
 	{
 		SelfReaction->RequestHitStop(CurrentHitEffect.HitStopPlayRate, CurrentHitEffect.HitStopDuration, MontageInstanceID);
+	}
+
+	// 공격자가 플레이어면 히트 확정 카메라 셰이크(AI는 PC 없어 자동 스킵).
+	// PlaySpace=UserDefined + 공격 방향(Direction)으로 정렬 → 방향성 정도는 에셋이 결정.
+	if (CurrentHitEffect.HitCameraShake)
+	{
+		if (APlayerController* PC = Owner->GetController<APlayerController>())
+		{
+			PC->ClientStartCameraShake(CurrentHitEffect.HitCameraShake, CurrentHitEffect.HitCameraShakeScale,
+			                           ECameraShakePlaySpace::UserDefined, Direction.Rotation());
+		}
 	}
 }
 

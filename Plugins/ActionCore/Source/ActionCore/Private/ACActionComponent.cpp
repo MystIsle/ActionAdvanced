@@ -103,7 +103,6 @@ void UACActionComponent::StopActiveAction()
 	}
 	
 	PlayingInstance->Stop();
-	PlayingInstance = nullptr;
 }
 
 bool UACActionComponent::CanPlayAction(const UACAction* InAction) const

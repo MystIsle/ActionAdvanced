@@ -27,6 +27,6 @@ void AAACharacter::ReceiveHit(const FACHitInfo& HitInfo)
 	}
 	if (HitReactionComponent)
 	{
-		HitReactionComponent->PlayReact(HitInfo.Effect, HitInfo.Direction, HitInfo.HitLocation);
+		HitReactionComponent->PlayReact(HitInfo);
 	}
 }

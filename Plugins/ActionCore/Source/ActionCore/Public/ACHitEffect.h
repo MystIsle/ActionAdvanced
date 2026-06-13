@@ -3,10 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Templates/SubclassOf.h"
 #include "ACHitEffect.generated.h"
 
 class UCurveFloat;
 class UNiagaraSystem;
+class UCameraShakeBase;
 
 USTRUCT(BlueprintType)
 struct ACTIONCORE_API FACHitEffect
@@ -20,6 +22,14 @@ struct ACTIONCORE_API FACHitEffect
 	// 히트스탑 중 GlobalAnimRateScale. 0 금지(거의 정지).
 	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float HitStopPlayRate = 0.05f;
+
+	// 피격 메시 지터 진폭(cm). 0이면 셰이크 없음. 지속은 HitStopDuration에 동기화.
+	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0"))
+	float MeshShakeAmplitude = 0.f;
+
+	// 피격 메시 지터 스텝 수(히트스톱 동안 흔들 횟수). 적을수록 뚝뚝, 많을수록 버즈.
+	UPROPERTY(EditAnywhere, meta = (ClampMin = "1"))
+	int32 MeshShakeSampleCount = 4;
 
 	// 넉백 거리(cm). 0이면 넉백 없음.
 	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0"))
@@ -54,6 +64,14 @@ struct ACTIONCORE_API FACHitEffect
 	// 히트스탑 동안 FX 타임스케일 하한(슬로모). 끄면 완전 동결.
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bHitFXMinTimeScale", ClampMin = "0.0", ClampMax = "1.0"))
 	float HitFXMinTimeScale = 0.2f;
+
+	// 공격자 히트 확정 카메라 셰이크. null이면 없음. 때린 쪽이 플레이어일 때만 발동(AI 자동 무시).
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UCameraShakeBase> HitCameraShake;
+
+	// 카메라 셰이크 강도 배수(ClientStartCameraShake Scale). 방향은 코드가 공격 방향으로 정렬.
+	UPROPERTY(EditAnywhere, meta = (ClampMin = "0.0"))
+	float HitCameraShakeScale = 1.f;
 };
 
 // 한 번의 피격 묶음. OnMeleeTraceHit → IACHittable::ReceiveHit로 전달.

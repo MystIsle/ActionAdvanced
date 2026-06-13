@@ -13,6 +13,7 @@ class UACMontageInstanceController;
 class UAnimMontage;
 class UCurveFloat;
 class UMaterialInstanceDynamic;
+class USkeletalMeshComponent;
 
 UCLASS(ClassGroup = (ActionCore), meta = (BlueprintSpawnableComponent))
 class ACTIONCORE_API UACHitReactionComponent : public UActorComponent
@@ -24,8 +25,9 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	void PlayReact(const FACHitEffect& Effect, const FVector& Direction, const FVector& HitLocation);
+	void PlayReact(const FACHitInfo& HitInfo);
 	void RequestHitStop(float Scale, float Duration, int32 MontageInstanceID = INDEX_NONE);
 
 private:
@@ -42,6 +44,11 @@ private:
 	void OnHitStopFinished();
 	void RestoreFXTimeScale();
 
+	// 메시 셰이크
+	void StartMeshShake(float Amplitude, int32 SampleCount, float Duration, const FVector& Direction);
+	void StopMeshShake();
+	void UpdateMeshShake();
+
 	// 히트 점멸
 	void StartHitFlash();
 	void EndHitFlash();
@@ -55,6 +62,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UACCharacterMovementComponent> MovementComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMeshComponent> SkeletalMesh;
 
 	// 설정
 	UPROPERTY(EditAnywhere, Category = "HitReaction")
@@ -80,6 +90,18 @@ private:
 
 	// 현재 히트스탑이 FX 스케일을 걸어둔 컨트롤러(복원 대상).
 	TWeakObjectPtr<UACMontageInstanceController> ScaledFXController;
+
+	// 메시 셰이크(히트스톱 지속에 동기화, 윈도우 동안만 틱)
+	bool bMeshShaking = false;
+	FVector MeshShakeBaseRelativeLocation = FVector::ZeroVector;
+	FVector MeshShakeBaseDir = FVector::ZeroVector;
+	float MeshShakeAmplitude = 0.f;
+	float MeshShakeSampleInterval = 0.f;
+	float MeshShakeDuration = 0.f;
+	float MeshShakeStartTime = 0.f;
+	float MeshShakeNextSampleTime = 0.f;
+	float MeshShakeSign = 1.f;
+	FVector MeshShakeCurrentDir = FVector::ZeroVector;
 
 	// 히트 점멸(전역 UACCombatFeelSettings 구동). falloff는 머티리얼 Time 기반 자체 계산.
 	UPROPERTY(Transient)
