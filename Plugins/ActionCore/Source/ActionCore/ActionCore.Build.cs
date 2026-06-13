@@ -16,7 +16,8 @@ public class ActionCore : ModuleRules
 				"Engine",
 				"GameplayTags",
 				"MeleeTrace",
-				"NiagaraAnimNotifies"
+				"NiagaraAnimNotifies",
+				"DeveloperSettings"
 			]
 		);
 

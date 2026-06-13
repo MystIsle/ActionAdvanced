@@ -5,6 +5,7 @@
 #include "ACActionComponent.h"
 #include "ACActionInstance.h"
 #include "ACAnimInstance.h"
+#include "ACCombatFeelSettings.h"
 #include "ACMontageInstanceController.h"
 #include "ACCharacterMovementComponent.h"
 #include "AIController.h"
@@ -12,16 +13,20 @@
 #include "Animation/AnimMontage.h"
 #include "BrainComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Curves/CurveFloat.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/RootMotionSource.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "TimerManager.h"
 
 UACHitReactionComponent::UACHitReactionComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
 void UACHitReactionComponent::BeginPlay()
@@ -50,6 +55,7 @@ void UACHitReactionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		}
 	}
 	RestoreFXTimeScale();
+	EndHitFlash();
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -164,6 +170,9 @@ void UACHitReactionComponent::PlayReact(const FACHitEffect& Effect, const FVecto
 	{
 		StartKnockback();
 	}
+
+	// 7. 히트 점멸(전역 세팅, Effect 무관)
+	StartHitFlash();
 }
 
 void UACHitReactionComponent::RequestHitStop(float Scale, float Duration, int32 MontageInstanceID)
@@ -208,6 +217,85 @@ void UACHitReactionComponent::OnHitStopFinished()
 		}
 	}
 	RestoreFXTimeScale();
+}
+
+void UACHitReactionComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+                                            FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (bFlashing == false || FlashMID == nullptr)
+	{
+		return;
+	}
+
+	FlashElapsed += DeltaTime; // 실시간(히트스톱 비동기화)
+	const float T = FlashDuration > 0.f ? FlashElapsed / FlashDuration : 1.f;
+	if (T >= 1.f)
+	{
+		EndHitFlash();
+		return;
+	}
+
+	const float Alpha = FlashCurve ? FlashCurve->GetFloatValue(T) : (1.f - T);
+	FlashMID->SetScalarParameterValue(TEXT("FlashAmount"), Alpha * FlashIntensity);
+}
+
+void UACHitReactionComponent::StartHitFlash()
+{
+	if (OwnerCharacter == nullptr)
+	{
+		return;
+	}
+
+	const UACCombatFeelSettings* Settings = GetDefault<UACCombatFeelSettings>();
+	if (Settings == nullptr || Settings->bEnableHitFlash == false)
+	{
+		return;
+	}
+
+	UMaterialInterface* FlashMaterial = Settings->FlashMaterial.LoadSynchronous();
+	if (FlashMaterial == nullptr)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
+	if (Mesh == nullptr)
+	{
+		return;
+	}
+
+	FlashMID = UMaterialInstanceDynamic::Create(FlashMaterial, this);
+	FlashMID->SetVectorParameterValue(TEXT("FlashColor"), Settings->FlashColor);
+	Mesh->SetOverlayMaterial(FlashMID);
+
+	FlashElapsed = 0.f;
+	FlashDuration = Settings->FlashDuration;
+	FlashIntensity = Settings->FlashIntensity;
+	FlashCurve = Settings->FlashCurve.LoadSynchronous();
+	bFlashing = true;
+
+	// 첫 프레임부터 피크가 보이도록 즉시 1회 적용.
+	const float Alpha = FlashCurve ? FlashCurve->GetFloatValue(0.f) : 1.f;
+	FlashMID->SetScalarParameterValue(TEXT("FlashAmount"), Alpha * FlashIntensity);
+
+	SetComponentTickEnabled(true);
+}
+
+void UACHitReactionComponent::EndHitFlash()
+{
+	if (OwnerCharacter)
+	{
+		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+		{
+			Mesh->SetOverlayMaterial(nullptr);
+		}
+	}
+	FlashMID = nullptr;
+	FlashCurve = nullptr;
+	bFlashing = false;
+	SetComponentTickEnabled(false);
 }
 
 void UACHitReactionComponent::RestoreFXTimeScale()
