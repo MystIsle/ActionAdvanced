@@ -6,6 +6,7 @@
 #include "ACHitEffect.generated.h"
 
 class UCurveFloat;
+class UNiagaraSystem;
 
 USTRUCT(BlueprintType)
 struct ACTIONCORE_API FACHitEffect
@@ -31,4 +32,26 @@ struct ACTIONCORE_API FACHitEffect
 	// 넉백 이동 이징(X=정규화 시간 0~1, Y=진행도 0~1). null이면 등속.
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UCurveFloat> KnockbackEaseCurve;
+
+	// 피격 임팩트 VFX. 히트 위치에 비부착 스폰, 때린 쪽(-넉백방향)을 향함. null이면 없음.
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UNiagaraSystem> HitNiagara;
+
+	// 히트 FX 스폰 스케일. 에셋 모듈이 오너 스케일을 안 받으면 안 먹을 수 있음.
+	UPROPERTY(EditAnywhere)
+	FVector HitFXScale = FVector(1.0);
+
+	UPROPERTY(EditAnywhere, meta = (InlineEditConditionToggle))
+	bool bHitFXPreSim = false;
+
+	// 히트 FX 프리롤(s): 스폰 직후 시뮬레이션을 미리 돌려 피크 프레임에서 동결되게.
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bHitFXPreSim", ClampMin = "0.0", ClampMax = "1.0"))
+	float HitFXPreSimTime = 0.1f;
+
+	UPROPERTY(EditAnywhere, meta = (InlineEditConditionToggle))
+	bool bHitFXMinTimeScale = false;
+
+	// 히트스탑 동안 FX 타임스케일 하한(슬로모). 끄면 완전 동결.
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bHitFXMinTimeScale", ClampMin = "0.0", ClampMax = "1.0"))
+	float HitFXMinTimeScale = 0.2f;
 };

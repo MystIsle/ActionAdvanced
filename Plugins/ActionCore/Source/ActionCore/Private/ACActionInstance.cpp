@@ -6,6 +6,8 @@
 #include "ACAction.h"
 #include "ACActionComponent.h"
 #include "ACActionDataAsset.h"
+#include "ACAnimInstance.h"
+#include "ACMontageInstanceController.h"
 #include "ACCharacterMovementComponent.h"
 #include "ACEnumLibrary.h"
 #include "ActionCore.h"
@@ -53,8 +55,9 @@ void UACActionInstance::Initialize(UACAction* InAction)
 		return;
 	}
 
-	AnimInstance = Mesh->GetAnimInstance();
-	if (ensure(AnimInstance) == false)
+	// ABP가 UACAnimInstance가 아니면 몽타주 콜백(블렌드아웃/종료)을 받을 수 없으므로 Ready 전이를 차단한다.
+	AnimInstance = Cast<UACAnimInstance>(Mesh->GetAnimInstance());
+	if (ensureMsgf(AnimInstance, TEXT("ABP가 UACAnimInstance를 상속해야 합니다. 리페런팅 필요 (Owner: %s)"), *GetNameSafe(Owner)) == false)
 	{
 		return;
 	}
@@ -85,10 +88,11 @@ bool UACActionInstance::Play(const FRotator& InRotation)
 	check(MontageInstance);
 	MontageInstanceID = MontageInstance->GetInstanceID();
 
-	//NOTE: 런타임 메시-AnimBP 교체시, 콜백 호출 안될 수 있음.
-	MontageInstance->OnMontageBlendingOutStarted.BindUObject(this, &ThisClass::OnMontageBlendingOutStarted);
-	MontageInstance->OnMontageEnded.BindUObject(this, &ThisClass::OnMontageEnded);
-
+	// OnMontageStarted 동기 브로드캐스트로 이 시점 컨트롤러 존재가 보장된다(ACAnimInstance::HandleMontageStarted).
+	UACMontageInstanceController* Controller = GetMontageInstanceController();
+	check(Controller);
+	Controller->OnBlendingOutStarted.AddUObject(this, &ThisClass::OnMontageBlendingOutStarted);
+	Controller->OnEnded.AddUObject(this, &ThisClass::OnMontageEnded);
 
 	// 워프 목표: 오토타게팅 러시가 잡히면 타겟 앞 지점, 아니면 제자리 + 회전(폴백).
 	FVector WarpLocation;
@@ -185,12 +189,12 @@ void UACActionInstance::OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor*
 
 	if (UACHitReactionComponent* Reaction = HitActor->FindComponentByClass<UACHitReactionComponent>())
 	{
-		Reaction->PlayReact(CurrentHitEffect, Direction);
+		Reaction->PlayReact(CurrentHitEffect, Direction, HitLocation);
 	}
 
 	if (UACHitReactionComponent* SelfReaction = Owner->FindComponentByClass<UACHitReactionComponent>())
 	{
-		SelfReaction->RequestHitStop(CurrentHitEffect.HitStopPlayRate, CurrentHitEffect.HitStopDuration);
+		SelfReaction->RequestHitStop(CurrentHitEffect.HitStopPlayRate, CurrentHitEffect.HitStopDuration, MontageInstanceID);
 	}
 }
 
@@ -217,13 +221,18 @@ void UACActionInstance::StopInternal(bool bNeedAnimStop)
 		return;
 	}
 
+	// 블렌드아웃 콜백만 끊는다(Ended는 컴포넌트 정리에 필요해 유지).
+	if (UACMontageInstanceController* Controller = GetMontageInstanceController())
+	{
+		Controller->OnBlendingOutStarted.RemoveAll(this);
+	}
+
 	FAnimMontageInstance* MontageInstance = AnimInstance->GetMontageInstanceForID(MontageInstanceID);
 	if (MontageInstance == nullptr)
 	{
 		return;
 	}
 
-	MontageInstance->OnMontageBlendingOutStarted.Unbind();
 	if (bNeedAnimStop && MontageInstance->IsPlaying() && bBlendingOut == false)
 	{
 		MontageInstance->Stop(MontageInstance->Montage->BlendOut);
@@ -257,6 +266,11 @@ void UACActionInstance::SetMovementLocked(bool bLock)
 	{
 		CharacterMovementComponent->SetMovementLocked(bMovementLocked);
 	}
+}
+
+UACMontageInstanceController* UACActionInstance::GetMontageInstanceController() const
+{
+	return AnimInstance ? AnimInstance->FindMontageInstanceController(MontageInstanceID) : nullptr;
 }
 
 FRotator UACActionInstance::DetermineFacingRotation(const FRotator& InputRotation) const

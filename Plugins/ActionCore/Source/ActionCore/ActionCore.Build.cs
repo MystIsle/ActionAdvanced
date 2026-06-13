@@ -15,11 +15,12 @@ public class ActionCore : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"GameplayTags",
-				"MeleeTrace"
+				"MeleeTrace",
+				"NiagaraAnimNotifies"
 			]
 		);
 
-		PrivateDependencyModuleNames.AddRange(["MotionWarping", "AIModule"]);
+		PrivateDependencyModuleNames.AddRange(["MotionWarping", "AIModule", "Niagara"]);
 
 		PrivateIncludePaths.AddRange([ModuleDirectory]);
 	}

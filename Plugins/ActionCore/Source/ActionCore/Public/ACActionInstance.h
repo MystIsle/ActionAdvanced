@@ -9,12 +9,13 @@
 #include "ACActionInstance.generated.h"
 
 class UACCharacterMovementComponent;
+class UACMontageInstanceController;
 class UACActionDataAsset;
 class UACActionComponent;
 class UACAction;
 class UAnimMontage;
 class ACharacter;
-class UAnimInstance;
+class UACAnimInstance;
 
 UENUM()
 enum class EACActionInstanceState : uint8
@@ -49,6 +50,7 @@ private:
 	void SetState(EACActionInstanceState NewState);
 	void StopInternal(bool bNeedAnimStop);
 	void SetMovementLocked(bool bLock);
+	UACMontageInstanceController* GetMontageInstanceController() const;
 	FRotator DetermineFacingRotation(const FRotator& InputRotation) const;
 
 	// 오토타게팅 러시 워프 목표(위치+회전)를 계산한다. 타겟이 없거나 거리/각도 밖이면 false(회전 폴백).
@@ -77,7 +79,7 @@ private:
 	TObjectPtr<UACCharacterMovementComponent> CharacterMovementComponent;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UAnimInstance> AnimInstance;
+	TObjectPtr<UACAnimInstance> AnimInstance;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMeleeTraceComponent> MeleeTraceComponent;

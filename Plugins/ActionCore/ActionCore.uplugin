@@ -29,6 +29,10 @@
 		{
 			"Name": "MeleeTrace",
 			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
+			"Enabled": true
 		}
 	]
 }

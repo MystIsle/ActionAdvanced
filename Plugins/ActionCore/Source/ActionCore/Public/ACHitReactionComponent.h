@@ -9,6 +9,7 @@
 
 class ACharacter;
 class UACCharacterMovementComponent;
+class UACMontageInstanceController;
 class UAnimMontage;
 class UCurveFloat;
 
@@ -23,14 +24,16 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	void PlayReact(const FACHitEffect& Effect, const FVector& Direction);
-	void RequestHitStop(float Scale, float Duration);
+	void PlayReact(const FACHitEffect& Effect, const FVector& Direction, const FVector& HitLocation);
+	void RequestHitStop(float Scale, float Duration, int32 MontageInstanceID = INDEX_NONE);
 
 private:
 	void StartKnockback();
 	void FinishReact();
 	void CancelReact();
 	void OnHitStopFinished();
+	void RestoreFXTimeScale();
+	UACMontageInstanceController* FindMontageInstanceController(int32 MontageInstanceID) const;
 
 	UPROPERTY(EditAnywhere, Category = "HitReaction")
 	TArray<TObjectPtr<UAnimMontage>> HitReactMontages;
@@ -50,6 +53,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UCurveFloat> PendingKnockbackCurve;
+
+	// 현재 히트스탑이 FX 스케일을 걸어둔 컨트롤러(복원 대상).
+	TWeakObjectPtr<UACMontageInstanceController> ScaledFXController;
 	uint16 KnockbackSourceID = 0;
 	int32 HitMontageIndex = 0;
 	bool bReacting = false;
