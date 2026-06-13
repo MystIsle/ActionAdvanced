@@ -2,8 +2,6 @@
 
 #include "ACHitReactionComponent.h"
 
-#include "ACActionComponent.h"
-#include "ACActionInstance.h"
 #include "ACAnimInstance.h"
 #include "ACCombatFeelSettings.h"
 #include "ACMontageInstanceController.h"
@@ -72,83 +70,17 @@ void UACHitReactionComponent::PlayReact(const FACHitEffect& Effect, const FVecto
 	}
 	bReacting = true;
 
-	// 1. 진행 중 공격 중단
-	if (UACActionComponent* ActionComp = OwnerCharacter->FindComponentByClass<UACActionComponent>())
-	{
-		if (UACActionInstance* Playing = ActionComp->GetPlayingInstance())
-		{
-			Playing->Stop();
-		}
-	}
-
-	// 2. 경직(입력 잠금) + AI면 BrainComponent 일시정지
+	// 경직: 입력 잠금 + AI 두뇌 일시정지
 	if (MovementComponent)
 	{
 		MovementComponent->SetMovementLocked(true);
 	}
-	if (AAIController* AI = Cast<AAIController>(OwnerCharacter->GetController()))
-	{
-		if (UBrainComponent* Brain = AI->GetBrainComponent())
-		{
-			Brain->PauseLogic(TEXT("HitReact"));
-		}
-	}
+	SetBrainLogicPaused(true);
 
-	// 넉백 반대방향(때린 쪽)을 즉시 응시 (보간 없음).
-	const FVector FaceDir = (-Direction).GetSafeNormal2D();
-	if (!FaceDir.IsNearlyZero())
-	{
-		OwnerCharacter->SetActorRotation(FaceDir.Rotation());
-	}
+	FaceAttacker(Direction);
 
-	// 3. 피격 몽타주 (배열 순차 재생, 끝나면 0으로 순환) + 인스턴스ID 취득(FX/히트스탑 타겟)
-	int32 ReactMontageInstanceID = INDEX_NONE;
-	if (HitReactMontages.Num() > 0)
-	{
-		const int32 Index = HitMontageIndex % HitReactMontages.Num();
-		HitMontageIndex = (HitMontageIndex + 1) % HitReactMontages.Num();
-		if (UAnimMontage* Montage = HitReactMontages[Index])
-		{
-			if (OwnerCharacter->PlayAnimMontage(Montage) > 0.f)
-			{
-				USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
-				UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
-				const FAnimMontageInstance* MontageInstance =
-					AnimInstance ? AnimInstance->GetActiveInstanceForMontage(Montage) : nullptr;
-				if (MontageInstance)
-				{
-					ReactMontageInstanceID = MontageInstance->GetInstanceID();
-				}
-			}
-		}
-	}
-
-	// 4. 히트 FX: 히트 위치에 비부착 스폰(때린 쪽을 향함) 후 피격 몽타주 컨트롤러에 등록 → 히트스탑 연동.
-	if (Effect.HitNiagara)
-	{
-		const FRotator FXRotation = (-Direction).GetSafeNormal().Rotation();
-		if (UNiagaraComponent* HitFXComponent =
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Effect.HitNiagara, HitLocation, FXRotation,
-			                                               Effect.HitFXScale))
-		{
-			// 프리롤은 등록(딜레이션 적용) 전에: 시작 프레임을 피크로 옮긴 뒤 동결/슬로모.
-			if (Effect.bHitFXPreSim && Effect.HitFXPreSimTime > 0.f)
-			{
-				HitFXComponent->AdvanceSimulationByTime(Effect.HitFXPreSimTime, 1.f / 60.f);
-			}
-
-			if (UACMontageInstanceController* Controller = FindMontageInstanceController(ReactMontageInstanceID))
-			{
-				FACMontageFXEntry Entry;
-				Entry.Component = HitFXComponent;
-				if (Effect.bHitFXMinTimeScale)
-				{
-					Entry.MinTimeScale = Effect.HitFXMinTimeScale;
-				}
-				Controller->RegisterFX(Entry);
-			}
-		}
-	}
+	const int32 ReactMontageInstanceID = PlayHitReactMontage();
+	SpawnHitFX(Effect, Direction, HitLocation, ReactMontageInstanceID);
 
 	// 넉백 파라미터 보관(히트스탑 후 StartKnockback에서 사용)
 	PendingKnockbackDir = Direction.GetSafeNormal2D();
@@ -156,10 +88,10 @@ void UACHitReactionComponent::PlayReact(const FACHitEffect& Effect, const FVecto
 	PendingKnockbackDuration = Effect.KnockbackDuration;
 	PendingKnockbackCurve = Effect.KnockbackEaseCurve;
 
-	// 5. 히트스탑(단일 진입점) — 피격 몽타주 인스턴스 타겟
+	// 히트스탑(단일 진입점) — 피격 몽타주 인스턴스 타겟
 	RequestHitStop(Effect.HitStopPlayRate, Effect.HitStopDuration, ReactMontageInstanceID);
 
-	// 6. 넉백 타이밍: 히트스탑 후
+	// 넉백 타이밍: 히트스탑 후
 	if (Effect.HitStopDuration > 0.f)
 	{
 		OwnerCharacter->GetWorldTimerManager().SetTimer(
@@ -170,130 +102,95 @@ void UACHitReactionComponent::PlayReact(const FACHitEffect& Effect, const FVecto
 		StartKnockback();
 	}
 
-	// 7. 히트 점멸(전역 세팅, Effect 무관)
+	// 히트 점멸(전역 세팅, Effect 무관)
 	StartHitFlash();
 }
 
-void UACHitReactionComponent::RequestHitStop(float Scale, float Duration, int32 MontageInstanceID)
+void UACHitReactionComponent::FaceAttacker(const FVector& HitDirection)
 {
-	if (Duration <= 0.f || OwnerCharacter == nullptr)
+	// 넉백 반대방향(때린 쪽)을 즉시 응시 (보간 없음).
+	const FVector FaceDir = (-HitDirection).GetSafeNormal2D();
+	if (!FaceDir.IsNearlyZero())
 	{
-		return;
+		OwnerCharacter->SetActorRotation(FaceDir.Rotation());
+	}
+}
+
+int32 UACHitReactionComponent::PlayHitReactMontage()
+{
+	// 피격 몽타주 배열 순차 재생(끝나면 0으로 순환) + 인스턴스ID 취득(FX/히트스탑 타겟).
+	if (HitReactMontages.Num() == 0)
+	{
+		return INDEX_NONE;
+	}
+
+	const int32 Index = HitMontageIndex % HitReactMontages.Num();
+	HitMontageIndex = (HitMontageIndex + 1) % HitReactMontages.Num();
+
+	UAnimMontage* Montage = HitReactMontages[Index];
+	if (Montage == nullptr || OwnerCharacter->PlayAnimMontage(Montage) <= 0.f)
+	{
+		return INDEX_NONE;
 	}
 
 	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
-	if (Mesh == nullptr)
+	UAnimInstance* AnimInstance = Mesh ? Mesh->GetAnimInstance() : nullptr;
+	const FAnimMontageInstance* MontageInstance =
+		AnimInstance ? AnimInstance->GetActiveInstanceForMontage(Montage) : nullptr;
+	return MontageInstance ? MontageInstance->GetInstanceID() : INDEX_NONE;
+}
+
+void UACHitReactionComponent::SpawnHitFX(const FACHitEffect& Effect, const FVector& Direction, const FVector& HitLocation, int32 MontageInstanceID)
+{
+	// 히트 위치에 비부착 스폰(때린 쪽을 향함) 후 피격 몽타주 컨트롤러에 등록 → 히트스탑 연동.
+	if (Effect.HitNiagara == nullptr)
 	{
 		return;
 	}
 
-	Mesh->GlobalAnimRateScale = Scale;
-
-	// FX 타겟 교체 시 이전 타겟 먼저 복원(마지막이 이김 — 안 하면 이전 몽타주 FX가 종료까지 얼어붙음).
-	UACMontageInstanceController* Target = FindMontageInstanceController(MontageInstanceID);
-	if (ScaledFXController.IsValid() && ScaledFXController.Get() != Target)
+	const FRotator FXRotation = (-Direction).GetSafeNormal().Rotation();
+	UNiagaraComponent* HitFXComponent =
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Effect.HitNiagara, HitLocation, FXRotation, Effect.HitFXScale);
+	if (HitFXComponent == nullptr)
 	{
-		ScaledFXController->SetFXTimeScale(1.f);
-	}
-	ScaledFXController = Target;
-	if (Target)
-	{
-		Target->SetFXTimeScale(Scale);
+		return;
 	}
 
-	// 재진입 시 타이머 리셋(마지막이 이김)
-	OwnerCharacter->GetWorldTimerManager().SetTimer(
-		HitStopTimer, this, &UACHitReactionComponent::OnHitStopFinished, Duration, false);
-}
-
-void UACHitReactionComponent::OnHitStopFinished()
-{
-	if (OwnerCharacter)
+	// 프리롤은 등록(딜레이션 적용) 전에: 시작 프레임을 피크로 옮긴 뒤 동결/슬로모.
+	if (Effect.bHitFXPreSim && Effect.HitFXPreSimTime > 0.f)
 	{
-		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+		HitFXComponent->AdvanceSimulationByTime(Effect.HitFXPreSimTime, 1.f / 60.f);
+	}
+
+	if (UACMontageInstanceController* Controller = FindMontageInstanceController(MontageInstanceID))
+	{
+		FACMontageFXEntry Entry;
+		Entry.Component = HitFXComponent;
+		if (Effect.bHitFXMinTimeScale)
 		{
-			Mesh->GlobalAnimRateScale = 1.f;
+			Entry.MinTimeScale = Effect.HitFXMinTimeScale;
 		}
+		Controller->RegisterFX(Entry);
 	}
-	RestoreFXTimeScale();
 }
 
-void UACHitReactionComponent::StartHitFlash()
+void UACHitReactionComponent::SetBrainLogicPaused(bool bPaused)
 {
-	if (OwnerCharacter == nullptr)
+	AAIController* AI = OwnerCharacter ? Cast<AAIController>(OwnerCharacter->GetController()) : nullptr;
+	UBrainComponent* Brain = AI ? AI->GetBrainComponent() : nullptr;
+	if (Brain == nullptr)
 	{
 		return;
 	}
 
-	const UACCombatFeelSettings* Settings = GetDefault<UACCombatFeelSettings>();
-	if (Settings == nullptr || Settings->bEnableHitFlash == false || Settings->FlashDuration <= 0.f)
+	if (bPaused)
 	{
-		return;
+		Brain->PauseLogic(TEXT("HitReact"));
 	}
-
-	UMaterialInterface* FlashMaterial = Settings->FlashMaterial.LoadSynchronous();
-	if (FlashMaterial == nullptr)
+	else
 	{
-		return;
+		Brain->ResumeLogic(TEXT("HitReact"));
 	}
-
-	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
-	if (Mesh == nullptr)
-	{
-		return;
-	}
-
-	// MID는 1회 생성 후 재사용(매 피격 Create 회피). 소스 머티리얼이 바뀌면 재생성.
-	if (FlashMID == nullptr || FlashMID->Parent != FlashMaterial)
-	{
-		FlashMID = UMaterialInstanceDynamic::Create(FlashMaterial, this);
-	}
-
-	// falloff는 머티리얼이 (Time - FlashStartTime)/FlashDuration으로 자체 계산 → 틱 불필요.
-	FlashMID->SetVectorParameterValue(TEXT("FlashColor"), Settings->FlashColor);
-	FlashMID->SetScalarParameterValue(TEXT("FlashStartTime"), GetWorld()->GetTimeSeconds());
-	FlashMID->SetScalarParameterValue(TEXT("FlashDuration"), Settings->FlashDuration);
-	FlashMID->SetScalarParameterValue(TEXT("FlashIntensity"), Settings->FlashIntensity);
-	FlashMID->SetScalarParameterValue(TEXT("FlashExponent"), Settings->FlashExponent);
-	Mesh->SetOverlayMaterial(FlashMID);
-
-	// 감쇠 종료 시 오버레이 해제(재피격 시 SetTimer가 리셋 — 마지막이 이김).
-	OwnerCharacter->GetWorldTimerManager().SetTimer(
-		FlashTimer, this, &UACHitReactionComponent::EndHitFlash, Settings->FlashDuration, false);
-}
-
-void UACHitReactionComponent::EndHitFlash()
-{
-	if (OwnerCharacter)
-	{
-		OwnerCharacter->GetWorldTimerManager().ClearTimer(FlashTimer);
-		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
-		{
-			Mesh->SetOverlayMaterial(nullptr);
-		}
-	}
-	// FlashMID는 보존(재사용). 다음 StartHitFlash에서 갱신.
-}
-
-void UACHitReactionComponent::RestoreFXTimeScale()
-{
-	if (ScaledFXController.IsValid())
-	{
-		ScaledFXController->SetFXTimeScale(1.f);
-	}
-	ScaledFXController = nullptr;
-}
-
-UACMontageInstanceController* UACHitReactionComponent::FindMontageInstanceController(int32 MontageInstanceID) const
-{
-	if (MontageInstanceID == INDEX_NONE || OwnerCharacter == nullptr)
-	{
-		return nullptr;
-	}
-
-	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
-	UACAnimInstance* AnimInstance = Mesh ? Cast<UACAnimInstance>(Mesh->GetAnimInstance()) : nullptr;
-	return AnimInstance ? AnimInstance->FindMontageInstanceController(MontageInstanceID) : nullptr;
 }
 
 void UACHitReactionComponent::StartKnockback()
@@ -332,16 +229,7 @@ void UACHitReactionComponent::FinishReact()
 	{
 		MovementComponent->SetMovementLocked(false);
 	}
-	if (OwnerCharacter)
-	{
-		if (AAIController* AI = Cast<AAIController>(OwnerCharacter->GetController()))
-		{
-			if (UBrainComponent* Brain = AI->GetBrainComponent())
-			{
-				Brain->ResumeLogic(TEXT("HitReact"));
-			}
-		}
-	}
+	SetBrainLogicPaused(false);
 	bReacting = false;
 	KnockbackSourceID = 0;
 }
@@ -357,4 +245,120 @@ void UACHitReactionComponent::CancelReact()
 		MovementComponent->RemoveRootMotionSourceByID(KnockbackSourceID);
 	}
 	FinishReact();
+}
+
+void UACHitReactionComponent::RequestHitStop(float Scale, float Duration, int32 MontageInstanceID)
+{
+	if (Duration <= 0.f || OwnerCharacter == nullptr)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
+	if (Mesh == nullptr)
+	{
+		return;
+	}
+
+	Mesh->GlobalAnimRateScale = Scale;
+
+	UACMontageInstanceController* Target = FindMontageInstanceController(MontageInstanceID);
+	if (ScaledFXController.IsValid() && ScaledFXController.Get() != Target)
+	{
+		ScaledFXController->SetFXTimeScale(1.f);
+	}
+	ScaledFXController = Target;
+	if (Target)
+	{
+		Target->SetFXTimeScale(Scale);
+	}
+
+	OwnerCharacter->GetWorldTimerManager().SetTimer(
+		HitStopTimer, this, &UACHitReactionComponent::OnHitStopFinished, Duration, false);
+}
+
+void UACHitReactionComponent::OnHitStopFinished()
+{
+	if (OwnerCharacter)
+	{
+		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+		{
+			Mesh->GlobalAnimRateScale = 1.f;
+		}
+	}
+	RestoreFXTimeScale();
+}
+
+void UACHitReactionComponent::RestoreFXTimeScale()
+{
+	if (ScaledFXController.IsValid())
+	{
+		ScaledFXController->SetFXTimeScale(1.f);
+	}
+	ScaledFXController = nullptr;
+}
+
+void UACHitReactionComponent::StartHitFlash()
+{
+	if (OwnerCharacter == nullptr)
+	{
+		return;
+	}
+
+	const UACCombatFeelSettings* Settings = GetDefault<UACCombatFeelSettings>();
+	if (Settings == nullptr || Settings->bEnableHitFlash == false || Settings->FlashDuration <= 0.f)
+	{
+		return;
+	}
+
+	UMaterialInterface* FlashMaterial = Settings->FlashMaterial.LoadSynchronous();
+	if (FlashMaterial == nullptr)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
+	if (Mesh == nullptr)
+	{
+		return;
+	}
+
+	if (FlashMID == nullptr || FlashMID->Parent != FlashMaterial)
+	{
+		FlashMID = UMaterialInstanceDynamic::Create(FlashMaterial, this);
+	}
+
+	FlashMID->SetVectorParameterValue(TEXT("FlashColor"), Settings->FlashColor);
+	FlashMID->SetScalarParameterValue(TEXT("FlashStartTime"), GetWorld()->GetTimeSeconds());
+	FlashMID->SetScalarParameterValue(TEXT("FlashDuration"), Settings->FlashDuration);
+	FlashMID->SetScalarParameterValue(TEXT("FlashIntensity"), Settings->FlashIntensity);
+	FlashMID->SetScalarParameterValue(TEXT("FlashExponent"), Settings->FlashExponent);
+	Mesh->SetOverlayMaterial(FlashMID);
+
+	OwnerCharacter->GetWorldTimerManager().SetTimer(
+		FlashTimer, this, &UACHitReactionComponent::EndHitFlash, Settings->FlashDuration, false);
+}
+
+void UACHitReactionComponent::EndHitFlash()
+{
+	if (OwnerCharacter)
+	{
+		OwnerCharacter->GetWorldTimerManager().ClearTimer(FlashTimer);
+		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+		{
+			Mesh->SetOverlayMaterial(nullptr);
+		}
+	}
+}
+
+UACMontageInstanceController* UACHitReactionComponent::FindMontageInstanceController(int32 MontageInstanceID) const
+{
+	if (MontageInstanceID == INDEX_NONE || OwnerCharacter == nullptr)
+	{
+		return nullptr;
+	}
+
+	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
+	UACAnimInstance* AnimInstance = Mesh ? Cast<UACAnimInstance>(Mesh->GetAnimInstance()) : nullptr;
+	return AnimInstance ? AnimInstance->FindMontageInstanceController(MontageInstanceID) : nullptr;
 }

@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -8,6 +8,7 @@
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
 #include "Team/AATeamID.h"
+#include "ACHittable.h"
 #include "AACharacter.generated.h"
 
 class UACActionComponent;
@@ -15,7 +16,7 @@ class UMeleeTraceComponent;
 class UACHitReactionComponent;
 
 UCLASS()
-class ACTIONADVANCED_API AAACharacter : public ACharacter, public IGenericTeamAgentInterface
+class ACTIONADVANCED_API AAACharacter : public ACharacter, public IGenericTeamAgentInterface, public IACHittable
 {
 	GENERATED_BODY()
 
@@ -30,13 +31,15 @@ public:
 
 	virtual FGenericTeamId GetGenericTeamId() const override { return static_cast<uint8>(TeamID); }
 
+	virtual void ReceiveHit(const FACHitInfo& HitInfo) override;
+
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UACActionComponent> ActionComponent;
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
-	
+
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UMeleeTraceComponent> MeleeTraceComponent;
 

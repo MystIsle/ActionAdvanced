@@ -20,6 +20,7 @@
 #include "ACTargetingLibrary.h"
 #include "GenericTeamAgentInterface.h"
 #include "ACHitReactionComponent.h"
+#include "ACHittable.h"
 
 #if ENABLE_DRAW_DEBUG
 #include "DrawDebugHelpers.h"
@@ -187,9 +188,14 @@ void UACActionInstance::OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor*
 	//NOTE: 현재 편의상 넉백 방향은, 한방향으로만.
 	const FVector Direction = Owner->GetActorForwardVector();
 
-	if (UACHitReactionComponent* Reaction = HitActor->FindComponentByClass<UACHitReactionComponent>())
+	if (IACHittable* Hittable = Cast<IACHittable>(HitActor))
 	{
-		Reaction->PlayReact(CurrentHitEffect, Direction, HitLocation);
+		FACHitInfo HitInfo;
+		HitInfo.Effect = CurrentHitEffect;
+		HitInfo.Direction = Direction;
+		HitInfo.HitLocation = HitLocation;
+		
+		Hittable->ReceiveHit(HitInfo);
 	}
 
 	if (UACHitReactionComponent* SelfReaction = Owner->FindComponentByClass<UACHitReactionComponent>())

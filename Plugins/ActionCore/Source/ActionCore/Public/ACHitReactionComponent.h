@@ -29,27 +29,43 @@ public:
 	void RequestHitStop(float Scale, float Duration, int32 MontageInstanceID = INDEX_NONE);
 
 private:
+	// 리액션 시퀀스
+	void FaceAttacker(const FVector& HitDirection);
+	int32 PlayHitReactMontage();
+	void SpawnHitFX(const FACHitEffect& Effect, const FVector& Direction, const FVector& HitLocation, int32 MontageInstanceID);
+	void SetBrainLogicPaused(bool bPaused);
 	void StartKnockback();
 	void FinishReact();
 	void CancelReact();
+
+	// 히트스탑
 	void OnHitStopFinished();
 	void RestoreFXTimeScale();
+
+	// 히트 점멸
 	void StartHitFlash();
 	void EndHitFlash();
+
+	// 유틸
 	UACMontageInstanceController* FindMontageInstanceController(int32 MontageInstanceID) const;
 
-	UPROPERTY(EditAnywhere, Category = "HitReaction")
-	TArray<TObjectPtr<UAnimMontage>> HitReactMontages;
-
+	// 캐시된 컴포넌트
 	UPROPERTY(Transient)
 	TObjectPtr<ACharacter> OwnerCharacter;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UACCharacterMovementComponent> MovementComponent;
 
-	FTimerHandle ReactTimer;
-	FTimerHandle HitStopTimer;
+	// 설정
+	UPROPERTY(EditAnywhere, Category = "HitReaction")
+	TArray<TObjectPtr<UAnimMontage>> HitReactMontages;
 
+	// 리액션 상태
+	FTimerHandle ReactTimer;
+	int32 HitMontageIndex = 0;
+	bool bReacting = false;
+
+	// 넉백
 	FVector PendingKnockbackDir = FVector::ZeroVector;
 	float PendingKnockbackDistance = 0.f;
 	float PendingKnockbackDuration = 0.f;
@@ -57,11 +73,13 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCurveFloat> PendingKnockbackCurve;
 
+	uint16 KnockbackSourceID = 0;
+
+	// 히트스탑
+	FTimerHandle HitStopTimer;
+
 	// 현재 히트스탑이 FX 스케일을 걸어둔 컨트롤러(복원 대상).
 	TWeakObjectPtr<UACMontageInstanceController> ScaledFXController;
-	uint16 KnockbackSourceID = 0;
-	int32 HitMontageIndex = 0;
-	bool bReacting = false;
 
 	// 히트 점멸(전역 UACCombatFeelSettings 구동). falloff는 머티리얼 Time 기반 자체 계산.
 	UPROPERTY(Transient)

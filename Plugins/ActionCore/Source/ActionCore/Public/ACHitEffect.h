@@ -55,3 +55,19 @@ struct ACTIONCORE_API FACHitEffect
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bHitFXMinTimeScale", ClampMin = "0.0", ClampMax = "1.0"))
 	float HitFXMinTimeScale = 0.2f;
 };
+
+// 한 번의 피격 묶음. OnMeleeTraceHit → IACHittable::ReceiveHit로 전달.
+USTRUCT(BlueprintType)
+struct ACTIONCORE_API FACHitInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite)
+	FACHitEffect Effect;
+
+	UPROPERTY(BlueprintReadWrite)
+	FVector Direction = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadWrite)
+	FVector HitLocation = FVector::ZeroVector;
+};

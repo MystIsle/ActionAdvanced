@@ -95,6 +95,17 @@ UACActionInstance* UACActionComponent::PlayAction(FGameplayTag ActionKey, const 
 	return Action->Play(InRotation);
 }
 
+void UACActionComponent::StopActiveAction()
+{
+	if (PlayingInstance == nullptr)
+	{
+		return;
+	}
+	
+	PlayingInstance->Stop();
+	PlayingInstance = nullptr;
+}
+
 bool UACActionComponent::CanPlayAction(const UACAction* InAction) const
 {
 	check(InAction);

@@ -24,6 +24,7 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UACActionInstance* PlayAction(FGameplayTag ActionKey, const FRotator& InRotation);
+	void StopActiveAction();
 	bool CanPlayAction(const UACAction* InAction) const;
 
 	UACActionInstance* GetPlayingInstance() const { return PlayingInstance; }

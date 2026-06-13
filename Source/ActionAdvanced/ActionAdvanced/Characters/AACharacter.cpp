@@ -18,3 +18,15 @@ AAACharacter::AAACharacter(const FObjectInitializer& ObjectInitializer)
 	MeleeTraceComponent = CreateDefaultSubobject<UMeleeTraceComponent>(TEXT("MeleeTrace"));
 	HitReactionComponent = CreateDefaultSubobject<UACHitReactionComponent>(TEXT("HitReaction"));
 }
+
+void AAACharacter::ReceiveHit(const FACHitInfo& HitInfo)
+{
+	if (ActionComponent)
+	{
+		ActionComponent->StopActiveAction();
+	}
+	if (HitReactionComponent)
+	{
+		HitReactionComponent->PlayReact(HitInfo.Effect, HitInfo.Direction, HitInfo.HitLocation);
+	}
+}
