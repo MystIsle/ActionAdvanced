@@ -150,7 +150,9 @@ void AAAPlayerController::OnInputMove(const FInputActionInstance& Instance)
 		{
 			if (CMC->IsMovementInputLocked() == false)
 			{
+				// 이동을 택했으니 직전에 버퍼된 공격 의사도 폐기 — 안 그러면 0.15s 내 유령 1타로 되살아난다.
 				CachedComboComponent->NotifyComboActionEnded();
+				BufferedInput = nullptr;
 			}
 		}
 	}
@@ -256,7 +258,7 @@ void AAAPlayerController::ScheduleDrainNextTick()
 {
 	// ③ 유휴 복귀 드레인 전용. 콤보 리셋(NotifyComboActionEnded)도 OnReturnedToIdle 구독이라, 동기로
 	// 부르면 등록 순서에 따라 리셋보다 먼저 돌 수 있다. 다음 틱으로 미뤄 "리셋 후 발동"을 보장한다.
-	if (BufferedInput && GetWorld())
+	if (BufferedInput)
 	{
 		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &AAAPlayerController::TryConsumeBuffer);
 	}
