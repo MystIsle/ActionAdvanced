@@ -6,17 +6,17 @@
 #include "ACActionContext.h"
 #include "ACActionInstance.h"
 
-UACAnimNotify_Cancelable::UACAnimNotify_Cancelable()
+UACAnimNotify_MoveCancelable::UACAnimNotify_MoveCancelable()
 {
 	bIsNativeBranchingPoint = true;
 }
 
-FString UACAnimNotify_Cancelable::GetNotifyName_Implementation() const
+FString UACAnimNotify_MoveCancelable::GetNotifyName_Implementation() const
 {
-	return TEXT("액션 캔슬 가능");
+	return TEXT("이동 캔슬 가능");
 }
 
-void UACAnimNotify_Cancelable::BranchingPointNotify(FBranchingPointNotifyPayload& BranchingPointPayload)
+void UACAnimNotify_MoveCancelable::BranchingPointNotify(FBranchingPointNotifyPayload& BranchingPointPayload)
 {
 	Super::BranchingPointNotify(BranchingPointPayload);
 
@@ -26,5 +26,5 @@ void UACAnimNotify_Cancelable::BranchingPointNotify(FBranchingPointNotifyPayload
 		return;
 	}
 
-	Context.Instance->MarkCancelable();
+	Context.Instance->MarkMoveCancelable();
 }

@@ -16,7 +16,8 @@ public:
 	virtual FRotator GetDeltaRotation(float DeltaTime) const override;
 
 	void SetMovementLocked(bool bLock);
-	
+	bool IsMovementInputLocked() const { return bMovementInputLocked; }
+
 protected:
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 

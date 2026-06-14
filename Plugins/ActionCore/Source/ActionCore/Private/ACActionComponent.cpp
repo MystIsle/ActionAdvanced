@@ -95,12 +95,22 @@ UACActionInstance* UACActionComponent::PlayAction(FGameplayTag ActionKey, const 
 	return Action->Play(InRotation);
 }
 
+void UACActionComponent::StopActiveAction()
+{
+	if (PlayingInstance == nullptr)
+	{
+		return;
+	}
+	
+	PlayingInstance->Stop();
+}
+
 bool UACActionComponent::CanPlayAction(const UACAction* InAction) const
 {
 	check(InAction);
 	//NOTE: 올 캔슬 액션 등의 특수한 경우 - 재생중인 액션과 액션의 트랜지션 조건 등을 여기서 판별함.
 
-	return PlayingInstance == nullptr || PlayingInstance->IsCancelable();
+	return PlayingInstance == nullptr || PlayingInstance->IsActionCancelable();
 }
 
 UACActionInstance* UACActionComponent::GetActivateInstance(int32 MontageInstanceID) const
@@ -145,6 +155,20 @@ void UACActionComponent::NotifyActionInstanceEnded(UACActionInstance* InInstance
 
 	UE_LOG(LogActionCore, Verbose, TEXT("[%s] 활성 액션 인스턴스 제거: %s (MontageInstanceID: %d, RemovedCount: %d, ActiveCount: %d)"),
 	       *GetNameSafe(GetOwner()), *GetNameSafe(InInstance), MontageInstanceID, RemovedCount, ActivateInstances.Num());
+
+	// 인터럽트 체이닝이면 PlayingInstance가 다음 액션을 가리키므로 발화 안 함; 진짜 유휴 복귀에만.
+	if (PlayingInstance == nullptr)
+	{
+		OnReturnedToIdle.Broadcast();
+	}
+}
+
+void UACActionComponent::MarkPlayingActionCancelable()
+{
+	if (PlayingInstance)
+	{
+		PlayingInstance->SetActionCancelable(true);
+	}
 }
 
 // ReSharper disable once CppMemberFunctionMayBeStatic

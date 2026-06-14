@@ -82,3 +82,8 @@ Plugins/Monolith/
 
 # Local MCP client config — points at the locally-built Monolith proxy binary.
 .mcp.json
+Content/EssentialAnimation
+Docs
+EssentialSwordShield.png
+.understand-anything
+*.user

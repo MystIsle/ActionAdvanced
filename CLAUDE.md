@@ -109,6 +109,7 @@ Korean design/planning docs for these features live in `Docs/` (e.g. `경직-넉
 - Default map: `/Game/ActionAdvanced/Maps/L_Demo` (set as both `GameDefaultMap` and `EditorStartupMap`).
 - `GlobalDefaultGameMode` is still the Blueprint `BP_ThirdPersonGameMode` from the template — when wiring up `AAAGameMode`, you'll also need to set the level's game mode override or repoint the global default.
 - Content/`Quaternius/` — 3D assets credited under CC0; treat as imported reference content.
+- Licensing (per README/LICENSE): the project's **original code is MIT-licensed**; Unreal Engine code and default content stay under the Epic Games EULA. The repo is meant to be published IP-clean — don't vendor in license-incompatible code or paid-asset content.
 - Content is tracked via Git LFS (see `.gitattributes` — `.uasset`, `.umap`, plus all common image/audio/video formats).
 - `Saved/`, `Intermediate/`, `DerivedDataCache/`, `Binaries/`, `.idea` are gitignored — never commit them.
 
@@ -125,8 +126,12 @@ Korean design/planning docs for these features live in `Docs/` (e.g. `경직-넉
 
 These choices are deliberate: commit `fdbcb97` ("나나이트 루멘 비활성화") switched GI/reflections off Lumen to Screen Space and disabled Nanite; RT and VSM were turned off afterward on `feature/action_core` to keep the editor light on Apple Silicon. Think twice before flipping them back.
 
+## Scope discipline — this repo is a deliberately minimal demo
+
+Make only the requested change, surgically. Do not introduce unrequested abstractions — no interface extraction, no new subsystems/managers, no event buses, no "for extensibility" refactors. Do not "improve" the deliberate simplifications: auto-targeting is intentionally a stateless library (not a tick/subsystem), the action system is intentionally non-GAS, and multiplayer is intentionally out of scope. `Legacy/` and `Variant_*` are frozen reference code. `TODO`/`NOTE` comments in the code are planned next steps — don't implement them preemptively. When in doubt, ask.
+
 ## Repo conventions
 
 - Commit messages and branch names in this repo are written in Korean. Match the existing style when adding new commits unless the user asks otherwise (e.g. `액션 시스템 코어 : 구현`).
-- Feature work happens on `feature/*` branches (e.g. `feature/action_core`), which merge into `develop`; `develop` integrates toward `main`. PRs target `main`. (Currently working directly on `develop`.)
+- Feature work happens on `feature/*` branches (e.g. `feature/action_core`), which merge into `develop`; `develop` integrates toward `main` via `release/*` milestone branches (e.g. `release/lecture01`, already merged to `main`). PRs target `main`. (Currently working on `lecture02`, branched from `main`, for the lecture part-2 work.)
 - The build artifacts under `Plugins/ActionCore/Intermediate/` and `Plugins/ActionCore/Binaries/` are generated — don't commit them (same rule as the top-level `Intermediate/`, `Binaries/`).
