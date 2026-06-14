@@ -38,6 +38,10 @@
 		{
 			"Name": "MeleeTrace",
 			"Enabled": true
+		},
+		{
+			"Name": "ComboGraph",
+			"Enabled": true
 		}
 	]
 }

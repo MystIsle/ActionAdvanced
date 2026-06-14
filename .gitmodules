@@ -1,3 +1,7 @@
 [submodule "Plugins/MeleeTrace"]
 	path = Plugins/MeleeTrace
 	url = https://github.com/rlewicki/MeleeTrace.git
+[submodule "Plugins/ComboGraph"]
+	path = Plugins/ComboGraph
+	url = https://github.com/MystIsle/ComboGraph.git
+	branch = 02-notifystate-integration
