@@ -11,6 +11,7 @@
 class UACActionDataAsset;
 class UACAction;
 class UACActionInstance;
+class UMotionWarpingComponent;
 
 // 재생 중 액션이 끝나 컴포넌트가 유휴(PlayingInstance 없음)로 돌아올 때 브로드캐스트.
 // 콤보 체이닝(다음 액션이 인터럽트)으로 끝난 경우엔 발화하지 않는다.
@@ -46,6 +47,10 @@ public:
 private:
 	UACAction* CreateAction(UACActionDataAsset* DataAsset);
 
+	// 러시 여부에 따라 활성 모션워핑 모디파이어의 위치 워프만 런타임 토글한다(회전 워프·노티파이 에셋 템플릿은 불변).
+	UFUNCTION()
+	void OnMotionWarpingPreUpdate(UMotionWarpingComponent* MotionWarpingComp);
+
 protected:
 	UPROPERTY(EditDefaultsOnly)
 	TArray<TObjectPtr<UACActionDataAsset> > DataAssets;
@@ -61,4 +66,6 @@ protected:
 
 	UPROPERTY(Transient)
 	TMap<int32, TObjectPtr<UACActionInstance> > ActivateInstances;
+
+	TWeakObjectPtr<UMotionWarpingComponent> CachedMotionWarping;
 };

@@ -99,7 +99,7 @@ bool UACActionInstance::Play(const FRotator& InRotation)
 	// 워프 목표: 오토타게팅 러시가 잡히면 타겟 앞 지점, 아니면 제자리 + 회전(폴백).
 	FVector WarpLocation;
 	FRotator WarpRotation;
-	const bool bLunging = TryLungeWarp(InRotation, WarpLocation, WarpRotation);
+	bLunging = TryLungeWarp(InRotation, WarpLocation, WarpRotation);
 	if (bLunging == false)
 	{
 		WarpLocation = Owner->GetActorLocation();

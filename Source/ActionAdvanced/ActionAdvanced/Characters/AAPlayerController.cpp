@@ -142,16 +142,21 @@ void AAAPlayerController::OnInputMove(const FInputActionInstance& Instance)
 		return;
 	}
 
-	// 이동 캔슬 = 콤보 이탈: 이동이 실제로 먹는 상태(이동락 해제)에서 유효 입력이 들어오면 콤보 플로우를 끊는다.
-	// 진행 중 공격 몽타주는 그대로 두고 콤보 상태만 리셋 → 다음 공격 입력은 새 Opener(1타).
+	// 이동 캔슬 = 콤보 이탈: 이동이 실제로 먹는 상태(이동락 해제)에서 유효 입력이 들어오면 콤보를 끊고
+	// 진행 공격도 멈춰 이동으로 전환한다. 루트모션 공격은 몽타주가 살아있으면 velocity를 점유해 이동을
+	// 덮어쓰므로, StopActiveAction으로 블렌드아웃시켜 루트모션을 풀어야 입력이 먹는다.
 	if (CachedComboComponent && CachedComboComponent->GetIsComboActive())
 	{
 		if (const UACCharacterMovementComponent* CMC = Cast<UACCharacterMovementComponent>(ControlledPawn->GetMovementComponent()))
 		{
 			if (CMC->IsMovementInputLocked() == false)
 			{
-				// 이동을 택했으니 직전에 버퍼된 공격 의사도 폐기 — 안 그러면 0.15s 내 유령 1타로 되살아난다.
 				CachedComboComponent->NotifyComboActionEnded();
+				if (CachedActionComponent)
+				{
+					CachedActionComponent->StopActiveAction();
+				}
+				// 이동을 택했으니 직전에 버퍼된 공격 의사도 폐기 — 0.15s 내 유령 1타 방지.
 				BufferedInput = nullptr;
 			}
 		}

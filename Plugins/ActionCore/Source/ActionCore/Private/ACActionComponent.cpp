@@ -8,6 +8,8 @@
 #include "ACActionInstance.h"
 #include "ActionCore.h"
 #include "GameFramework/Character.h"
+#include "MotionWarpingComponent.h"
+#include "RootMotionModifier.h"
 
 
 UACActionComponent::UACActionComponent()
@@ -52,10 +54,25 @@ void UACActionComponent::InitializeComponent()
 
 		Actions.Add(Action->GetKey(), Action);
 	}
+
+	if (OwnerCharacter)
+	{
+		if (UMotionWarpingComponent* MotionWarping = OwnerCharacter->FindComponentByClass<UMotionWarpingComponent>())
+		{
+			MotionWarping->OnPreUpdate.AddDynamic(this, &UACActionComponent::OnMotionWarpingPreUpdate);
+			CachedMotionWarping = MotionWarping;
+		}
+	}
 }
+
 void UACActionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+
+	if (UMotionWarpingComponent* MotionWarping = CachedMotionWarping.Get())
+	{
+		MotionWarping->OnPreUpdate.RemoveDynamic(this, &UACActionComponent::OnMotionWarpingPreUpdate);
+	}
 
 	if (ActivateInstances.IsEmpty())
 	{
@@ -178,4 +195,19 @@ UACAction* UACActionComponent::CreateAction(UACActionDataAsset* DataAsset)
 	UACAction* Action = NewObject<UACAction>(this);
 	Action->Initialize(this, DataAsset);
 	return Action;
+}
+
+void UACActionComponent::OnMotionWarpingPreUpdate(UMotionWarpingComponent* MotionWarpingComp)
+{
+	// 러시면 위치 워프(타겟까지 끌어당김), 아니면 끔(애님 내장 루트모션이 그대로 전진). 회전 워프는 불변 → 콤보 방향전환 유지.
+	// GetModifiers()는 윈도우마다 새로 복제되는 인스턴스라, 여기서 바꿔도 노티파이 에셋의 모디파이어 템플릿은 건드리지 않는다.
+	const bool bLunging = PlayingInstance && PlayingInstance->IsLunging();
+
+	for (URootMotionModifier* Modifier : MotionWarpingComp->GetModifiers())
+	{
+		if (URootMotionModifier_Warp* WarpModifier = Cast<URootMotionModifier_Warp>(Modifier))
+		{
+			WarpModifier->bWarpTranslation = bLunging;
+		}
+	}
 }

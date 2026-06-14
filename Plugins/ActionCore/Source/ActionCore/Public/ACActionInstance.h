@@ -47,6 +47,9 @@ public:
 	void MarkMoveCancelable();
 	void SetActionCancelable(bool bInCancelable);
 
+	// 이 재생이 오토타게팅 러시(타겟 확보)로 발동됐는지. 모션워핑 위치 워프 토글의 기준.
+	bool IsLunging() const { return bLunging; }
+
 private:
 	void SetState(EACActionInstanceState NewState);
 	void StopInternal(bool bNeedAnimStop);
@@ -91,5 +94,6 @@ private:
 	bool bActionCancelable = false;
 	bool bMovementLocked = false;
 	bool bHitDetecting = false;
+	bool bLunging = false;
 	FACHitEffect CurrentHitEffect;
 };
