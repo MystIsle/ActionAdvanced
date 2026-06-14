@@ -356,10 +356,6 @@ void UACActionInstance::OnMontageBlendingOutStarted(UAnimMontage* AnimMontage, b
 		SetState(EACActionInstanceState::BlendingOut);
 		MarkMoveCancelable();
 		SetActionCancelable(true);
-		if (OwnerComponent)
-		{
-			OwnerComponent->NotifyActionInstanceBlendingOut(this);
-		}
 		return;
 	}
 

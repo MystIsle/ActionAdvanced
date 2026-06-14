@@ -42,6 +42,13 @@ protected:
 	UFUNCTION()
 	void OnComboPlayAction(FGameplayTag ActionTag);
 
+	// 선입력 버퍼: 입력을 스탬프하고, 발동 가능 시점(입력 즉시 / 콤보창 열림 / 유휴 복귀)에 소비.
+	// 재진입은 무관(노티·몽타주 이벤트는 UE가 Advance 밖 batch 단계에서 부름). 단 ③ 유휴는 콤보 리셋과
+	// 같은 OnReturnedToIdle 구독이라, 리셋 후 발동을 보장하려 next-tick으로만 미룬다(②는 동기).
+	void BufferInput(UInputAction* InputAction);
+	void TryConsumeBuffer();
+	void ScheduleDrainNextTick();
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;
@@ -77,4 +84,13 @@ protected:
 	TObjectPtr<UComboHandlerComponent> CachedComboComponent;
 
 	FRotator ActionRotation;
+
+	// 선입력 버퍼(단일 슬롯). 회전은 발동 시점 ActionRotation을 쓰므로 버퍼에 담지 않는다.
+	UPROPERTY(EditDefaultsOnly, Category = "Combo", meta = (ClampMin = "0.0"))
+	float InputBufferWindow = 0.15f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> BufferedInput;
+
+	double BufferedTime = -1.0;
 };

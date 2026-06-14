@@ -37,7 +37,9 @@ public:
 	void NotifyActionInstancePlayed(UACActionInstance* InInstance);
 	void NotifyActionInstanceStopped(UACActionInstance* InInstance);
 	void NotifyActionInstanceEnded(UACActionInstance* InInstance);
-	void NotifyActionInstanceBlendingOut(UACActionInstance* InInstance);
+
+	// 콤보가 전이를 허가한 시점에 진행 중 액션의 캔슬 게이트를 연다(컨트롤러가 호출).
+	void MarkPlayingActionCancelable();
 
 	FACOnReturnedToIdle OnReturnedToIdle;
 

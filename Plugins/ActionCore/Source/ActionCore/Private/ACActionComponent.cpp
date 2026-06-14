@@ -163,15 +163,11 @@ void UACActionComponent::NotifyActionInstanceEnded(UACActionInstance* InInstance
 	}
 }
 
-void UACActionComponent::NotifyActionInstanceBlendingOut(UACActionInstance* InInstance)
+void UACActionComponent::MarkPlayingActionCancelable()
 {
-	check(InInstance);
-
-	// 자연 블렌드아웃 = 이동락이 풀리는 시점. 콤보도 여기서 idle로 돌려, 다음 공격이 몽타주 완전
-	// 종료를 기다리지 않고 블렌드아웃 중에 나가게 한다. (인터럽트 체이닝은 이 경로를 안 탐)
-	if (PlayingInstance == InInstance)
+	if (PlayingInstance)
 	{
-		OnReturnedToIdle.Broadcast();
+		PlayingInstance->SetActionCancelable(true);
 	}
 }
 

@@ -7,8 +7,10 @@
 #include "Engine/LocalPlayer.h"
 #include "InputActionValue.h"
 #include "ACActionComponent.h"
+#include "ACCharacterMovementComponent.h"
 #include "Components/ComboHandlerComponent.h"
 #include "GameFramework/Character.h"
+#include "TimerManager.h"
 #include "ActionAdvanced.h"
 
 void AAAPlayerController::SetupInputComponent()
@@ -43,6 +45,12 @@ void AAAPlayerController::OnPossess(APawn* InPawn)
 	if (CachedComboComponent)
 	{
 		CachedComboComponent->OnPlayComboAction.AddDynamic(this, &AAAPlayerController::OnComboPlayAction);
+		CachedComboComponent->OnComboWindowOpened.AddUObject(this, &AAAPlayerController::TryConsumeBuffer);
+	}
+
+	if (CachedActionComponent)
+	{
+		CachedActionComponent->OnReturnedToIdle.AddUObject(this, &AAAPlayerController::ScheduleDrainNextTick);
 	}
 
 	// 매핑 컨텍스트는 로컬 컨트롤러 전용 작업이다. 원격/비로컬 컨트롤러에서는 GetLocalPlayer()가 null이므로 가드한다.
@@ -65,9 +73,16 @@ void AAAPlayerController::OnUnPossess()
 	if (CachedComboComponent)
 	{
 		CachedComboComponent->OnPlayComboAction.RemoveDynamic(this, &AAAPlayerController::OnComboPlayAction);
+		CachedComboComponent->OnComboWindowOpened.RemoveAll(this);
 		CachedComboComponent = nullptr;
 	}
 
+	if (CachedActionComponent)
+	{
+		CachedActionComponent->OnReturnedToIdle.RemoveAll(this);
+	}
+
+	BufferedInput = nullptr;
 	CachedActionComponent = nullptr;
 
 	if (IsLocalPlayerController())
@@ -127,6 +142,19 @@ void AAAPlayerController::OnInputMove(const FInputActionInstance& Instance)
 		return;
 	}
 
+	// 이동 캔슬 = 콤보 이탈: 이동이 실제로 먹는 상태(이동락 해제)에서 유효 입력이 들어오면 콤보 플로우를 끊는다.
+	// 진행 중 공격 몽타주는 그대로 두고 콤보 상태만 리셋 → 다음 공격 입력은 새 Opener(1타).
+	if (CachedComboComponent && CachedComboComponent->GetIsComboActive())
+	{
+		if (const UACCharacterMovementComponent* CMC = Cast<UACCharacterMovementComponent>(ControlledPawn->GetMovementComponent()))
+		{
+			if (CMC->IsMovementInputLocked() == false)
+			{
+				CachedComboComponent->NotifyComboActionEnded();
+			}
+		}
+	}
+
 	const FVector InputDir = FVector(Axis.Y, Axis.X, 0.f).GetSafeNormal();
 	const FVector WorldInputDir = YawRotation.RotateVector(InputDir);
 	ActionRotation = WorldInputDir.Rotation();
@@ -143,10 +171,22 @@ void AAAPlayerController::OnInputLookTriggered(const FInputActionValue& Value)
 
 void AAAPlayerController::OnInputJumpStarted()
 {
-	if (ACharacter* ControlledCharacter = Cast<ACharacter>(GetPawn()))
+	ACharacter* ControlledCharacter = Cast<ACharacter>(GetPawn());
+	if (ControlledCharacter == nullptr)
 	{
-		ControlledCharacter->Jump();
+		return;
 	}
+
+	// 점프도 이동의 일부 — 액션이 이동을 잠근 동안(캔슬 윈도우 전)엔 막는다.
+	if (const UACCharacterMovementComponent* CMC = Cast<UACCharacterMovementComponent>(ControlledCharacter->GetCharacterMovement()))
+	{
+		if (CMC->IsMovementInputLocked())
+		{
+			return;
+		}
+	}
+
+	ControlledCharacter->Jump();
 }
 
 void AAAPlayerController::OnInputSprint(const FInputActionValue& Value)
@@ -161,24 +201,63 @@ void AAAPlayerController::OnInputSprint(const FInputActionValue& Value)
 
 void AAAPlayerController::OnInputLightAttackStarted()
 {
-	if (CachedComboComponent)
-	{
-		CachedComboComponent->ProcessComboAttack(LightAttackInputAction);
-	}
+	BufferInput(LightAttackInputAction);
 }
 
 void AAAPlayerController::OnInputHeavyAttackStarted()
 {
-	if (CachedComboComponent)
-	{
-		CachedComboComponent->ProcessComboAttack(HeavyAttackInputAction);
-	}
+	BufferInput(HeavyAttackInputAction);
 }
 
 void AAAPlayerController::OnComboPlayAction(FGameplayTag ActionTag)
 {
 	if (CachedActionComponent)
 	{
+		// 콤보 그래프가 이 전이를 허가했으므로, 진행 중 타를 캔슬해 새 타가 인터럽트하도록 게이트를 연다.
+		CachedActionComponent->MarkPlayingActionCancelable();
 		CachedActionComponent->PlayAction(ActionTag, ActionRotation);
+	}
+}
+
+void AAAPlayerController::BufferInput(UInputAction* InputAction)
+{
+	if (CachedComboComponent == nullptr)
+	{
+		return;
+	}
+
+	BufferedInput = InputAction;
+	BufferedTime = GetWorld()->GetTimeSeconds();
+	TryConsumeBuffer();
+}
+
+void AAAPlayerController::TryConsumeBuffer()
+{
+	if (BufferedInput == nullptr || CachedComboComponent == nullptr)
+	{
+		return;
+	}
+
+	// 만료된 입력은 폐기(콤보 의도가 지난 입력).
+	if (GetWorld()->GetTimeSeconds() - BufferedTime > InputBufferWindow)
+	{
+		BufferedInput = nullptr;
+		return;
+	}
+
+	// 발동 성공 시에만 비운다(lazy). 막히면 보존해 다음 시점에 재시도.
+	if (CachedComboComponent->ProcessComboAttack(BufferedInput))
+	{
+		BufferedInput = nullptr;
+	}
+}
+
+void AAAPlayerController::ScheduleDrainNextTick()
+{
+	// ③ 유휴 복귀 드레인 전용. 콤보 리셋(NotifyComboActionEnded)도 OnReturnedToIdle 구독이라, 동기로
+	// 부르면 등록 순서에 따라 리셋보다 먼저 돌 수 있다. 다음 틱으로 미뤄 "리셋 후 발동"을 보장한다.
+	if (BufferedInput && GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &AAAPlayerController::TryConsumeBuffer);
 	}
 }

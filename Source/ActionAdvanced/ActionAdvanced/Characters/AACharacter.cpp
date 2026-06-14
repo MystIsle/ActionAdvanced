@@ -38,6 +38,7 @@ void AAACharacter::ReceiveHit(const FACHitInfo& HitInfo)
 	{
 		ActionComponent->StopActiveAction();
 	}
+	
 	if (HitReactionComponent)
 	{
 		HitReactionComponent->PlayReact(HitInfo);
