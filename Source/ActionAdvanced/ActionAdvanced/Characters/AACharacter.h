@@ -9,21 +9,26 @@
 #include "GenericTeamAgentInterface.h"
 #include "Team/AATeamID.h"
 #include "ACHittable.h"
+#include "Interfaces/ComboHandlerInterface.h"
 #include "AACharacter.generated.h"
 
 class UACActionComponent;
 class UMeleeTraceComponent;
 class UACHitReactionComponent;
+class UComboHandlerComponent;
 
 UCLASS()
-class ACTIONADVANCED_API AAACharacter : public ACharacter, public IGenericTeamAgentInterface, public IACHittable
+class ACTIONADVANCED_API AAACharacter : public ACharacter, public IGenericTeamAgentInterface, public IACHittable, public IComboHandlerInterface
 {
 	GENERATED_BODY()
 
 public:
 	AAACharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	virtual void BeginPlay() override;
+
 	UACActionComponent* GetActionComponent() const { return ActionComponent; }
+	virtual UComboHandlerComponent* GetComboHandlerComponent() const override { return ComboHandlerComponent; }
 	UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 	UMeleeTraceComponent* GetMeleeTraceComponent() const { return MeleeTraceComponent; }
 
@@ -45,6 +50,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UACHitReactionComponent> HitReactionComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UComboHandlerComponent> ComboHandlerComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Team")
 	EAATeamID TeamID = EAATeamID::NoTeam;

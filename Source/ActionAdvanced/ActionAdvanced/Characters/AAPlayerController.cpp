@@ -7,6 +7,7 @@
 #include "Engine/LocalPlayer.h"
 #include "InputActionValue.h"
 #include "ACActionComponent.h"
+#include "Components/ComboHandlerComponent.h"
 #include "GameFramework/Character.h"
 #include "ActionAdvanced.h"
 
@@ -38,6 +39,12 @@ void AAAPlayerController::OnPossess(APawn* InPawn)
 
 	CachedActionComponent = InPawn ? InPawn->FindComponentByClass<UACActionComponent>() : nullptr;
 
+	CachedComboComponent = InPawn ? InPawn->FindComponentByClass<UComboHandlerComponent>() : nullptr;
+	if (CachedComboComponent)
+	{
+		CachedComboComponent->OnPlayComboAction.AddDynamic(this, &AAAPlayerController::OnComboPlayAction);
+	}
+
 	// 매핑 컨텍스트는 로컬 컨트롤러 전용 작업이다. 원격/비로컬 컨트롤러에서는 GetLocalPlayer()가 null이므로 가드한다.
 	if (IsLocalPlayerController())
 	{
@@ -54,6 +61,12 @@ void AAAPlayerController::OnPossess(APawn* InPawn)
 void AAAPlayerController::OnUnPossess()
 {
 	Super::OnUnPossess();
+
+	if (CachedComboComponent)
+	{
+		CachedComboComponent->OnPlayComboAction.RemoveDynamic(this, &AAAPlayerController::OnComboPlayAction);
+		CachedComboComponent = nullptr;
+	}
 
 	CachedActionComponent = nullptr;
 
@@ -148,10 +161,24 @@ void AAAPlayerController::OnInputSprint(const FInputActionValue& Value)
 
 void AAAPlayerController::OnInputLightAttackStarted()
 {
-	PlayAction(LightAttackTag);
+	if (CachedComboComponent)
+	{
+		CachedComboComponent->ProcessComboAttack(LightAttackInputAction);
+	}
 }
 
 void AAAPlayerController::OnInputHeavyAttackStarted()
 {
-	PlayAction(HeavyAttackTag);
+	if (CachedComboComponent)
+	{
+		CachedComboComponent->ProcessComboAttack(HeavyAttackInputAction);
+	}
+}
+
+void AAAPlayerController::OnComboPlayAction(FGameplayTag ActionTag)
+{
+	if (CachedActionComponent)
+	{
+		CachedActionComponent->PlayAction(ActionTag, ActionRotation);
+	}
 }

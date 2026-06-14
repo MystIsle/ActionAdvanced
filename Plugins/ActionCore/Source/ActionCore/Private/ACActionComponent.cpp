@@ -110,7 +110,7 @@ bool UACActionComponent::CanPlayAction(const UACAction* InAction) const
 	check(InAction);
 	//NOTE: 올 캔슬 액션 등의 특수한 경우 - 재생중인 액션과 액션의 트랜지션 조건 등을 여기서 판별함.
 
-	return PlayingInstance == nullptr || PlayingInstance->IsCancelable();
+	return PlayingInstance == nullptr || PlayingInstance->IsActionCancelable();
 }
 
 UACActionInstance* UACActionComponent::GetActivateInstance(int32 MontageInstanceID) const
@@ -155,6 +155,24 @@ void UACActionComponent::NotifyActionInstanceEnded(UACActionInstance* InInstance
 
 	UE_LOG(LogActionCore, Verbose, TEXT("[%s] 활성 액션 인스턴스 제거: %s (MontageInstanceID: %d, RemovedCount: %d, ActiveCount: %d)"),
 	       *GetNameSafe(GetOwner()), *GetNameSafe(InInstance), MontageInstanceID, RemovedCount, ActivateInstances.Num());
+
+	// 인터럽트 체이닝이면 PlayingInstance가 다음 액션을 가리키므로 발화 안 함; 진짜 유휴 복귀에만.
+	if (PlayingInstance == nullptr)
+	{
+		OnReturnedToIdle.Broadcast();
+	}
+}
+
+void UACActionComponent::NotifyActionInstanceBlendingOut(UACActionInstance* InInstance)
+{
+	check(InInstance);
+
+	// 자연 블렌드아웃 = 이동락이 풀리는 시점. 콤보도 여기서 idle로 돌려, 다음 공격이 몽타주 완전
+	// 종료를 기다리지 않고 블렌드아웃 중에 나가게 한다. (인터럽트 체이닝은 이 경로를 안 탐)
+	if (PlayingInstance == InInstance)
+	{
+		OnReturnedToIdle.Broadcast();
+	}
 }
 
 // ReSharper disable once CppMemberFunctionMayBeStatic

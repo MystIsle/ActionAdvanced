@@ -12,6 +12,7 @@ struct FInputActionInstance;
 class UInputAction;
 class UInputMappingContext;
 class UACActionComponent;
+class UComboHandlerComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -36,6 +37,10 @@ protected:
 	void OnInputSprint(const FInputActionValue& Value);
 	void OnInputLightAttackStarted();
 	void OnInputHeavyAttackStarted();
+
+	// ComboHandler가 다음 콤보 노드의 ActionTag를 통보 → 우리 액션 시스템으로 재생.
+	UFUNCTION()
+	void OnComboPlayAction(FGameplayTag ActionTag);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
@@ -67,6 +72,9 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UACActionComponent> CachedActionComponent;
-	
+
+	UPROPERTY(Transient)
+	TObjectPtr<UComboHandlerComponent> CachedComboComponent;
+
 	FRotator ActionRotation;
 };

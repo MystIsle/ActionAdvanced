@@ -7,12 +7,12 @@
 #include "ACAnimNotify_Cancelable.generated.h"
 
 UCLASS()
-class ACTIONCORE_API UACAnimNotify_Cancelable : public UAnimNotify
+class ACTIONCORE_API UACAnimNotify_MoveCancelable : public UAnimNotify
 {
 	GENERATED_BODY()
 	
 public:
-	UACAnimNotify_Cancelable();
+	UACAnimNotify_MoveCancelable();
 
 	virtual FString GetNotifyName_Implementation() const override;
 	virtual void BranchingPointNotify(FBranchingPointNotifyPayload& BranchingPointPayload) override;

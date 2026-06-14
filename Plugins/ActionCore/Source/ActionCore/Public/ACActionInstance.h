@@ -43,8 +43,9 @@ public:
 	EACActionInstanceState GetState() const { return State; }
 	int32 GetMontageInstanceID() const { return MontageInstanceID; }
 	bool IsPlaying() const { return State == EACActionInstanceState::Playing || State == EACActionInstanceState::BlendingOut; }
-	bool IsCancelable() const;
-	void MarkCancelable();
+	bool IsActionCancelable() const;
+	void MarkMoveCancelable();
+	void SetActionCancelable(bool bInCancelable);
 
 private:
 	void SetState(EACActionInstanceState NewState);
@@ -86,7 +87,8 @@ private:
 
 	EACActionInstanceState State = EACActionInstanceState::None;
 	int32 MontageInstanceID = INDEX_NONE;
-	bool bCancelable = false;
+	bool bMoveCancelable = false;
+	bool bActionCancelable = false;
 	bool bMovementLocked = false;
 	bool bHitDetecting = false;
 	FACHitEffect CurrentHitEffect;

@@ -135,22 +135,25 @@ void UACActionInstance::Stop()
 	StopInternal(true);
 }
 
-bool UACActionInstance::IsCancelable() const
+bool UACActionInstance::IsActionCancelable() const
 {
-	return bCancelable;
+	return bActionCancelable;
 }
 
-void UACActionInstance::MarkCancelable()
+void UACActionInstance::MarkMoveCancelable()
 {
-	if (bCancelable)
+	if (bMoveCancelable)
 	{
 		return;
 	}
 
-	bCancelable = true;
-
-	//NOTE: 필요시 이동 캔슬 - 공격 캔슬을 분리해야 한다. 현재는 합쳐져 있는 상태
+	bMoveCancelable = true;
 	SetMovementLocked(false);
+}
+
+void UACActionInstance::SetActionCancelable(bool bInCancelable)
+{
+	bActionCancelable = bInCancelable;
 }
 
 void UACActionInstance::BeginHitDetection(const FACHitEffect& InHitEffect)
@@ -351,7 +354,12 @@ void UACActionInstance::OnMontageBlendingOutStarted(UAnimMontage* AnimMontage, b
 	if (bInterrupted == false)
 	{
 		SetState(EACActionInstanceState::BlendingOut);
-		MarkCancelable();
+		MarkMoveCancelable();
+		SetActionCancelable(true);
+		if (OwnerComponent)
+		{
+			OwnerComponent->NotifyActionInstanceBlendingOut(this);
+		}
 		return;
 	}
 

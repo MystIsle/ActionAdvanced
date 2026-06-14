@@ -12,6 +12,10 @@ class UACActionDataAsset;
 class UACAction;
 class UACActionInstance;
 
+// 재생 중 액션이 끝나 컴포넌트가 유휴(PlayingInstance 없음)로 돌아올 때 브로드캐스트.
+// 콤보 체이닝(다음 액션이 인터럽트)으로 끝난 경우엔 발화하지 않는다.
+DECLARE_MULTICAST_DELEGATE(FACOnReturnedToIdle);
+
 UCLASS()
 class ACTIONCORE_API UACActionComponent : public UActorComponent
 {
@@ -33,6 +37,9 @@ public:
 	void NotifyActionInstancePlayed(UACActionInstance* InInstance);
 	void NotifyActionInstanceStopped(UACActionInstance* InInstance);
 	void NotifyActionInstanceEnded(UACActionInstance* InInstance);
+	void NotifyActionInstanceBlendingOut(UACActionInstance* InInstance);
+
+	FACOnReturnedToIdle OnReturnedToIdle;
 
 private:
 	UACAction* CreateAction(UACActionDataAsset* DataAsset);
