@@ -12,6 +12,10 @@
 #include "GameFramework/Character.h"
 #include "TimerManager.h"
 #include "ActionAdvanced.h"
+#include "ACCombatFeelSettings.h"
+#include "Engine/Engine.h"
+#include "InputCoreTypes.h"
+#include "HAL/IConsoleManager.h"
 
 void AAAPlayerController::SetupInputComponent()
 {
@@ -33,6 +37,10 @@ void AAAPlayerController::SetupInputComponent()
 	                      &AAAPlayerController::OnInputLightAttackStarted);
 	InputComp->BindAction(HeavyAttackInputAction, ETriggerEvent::Started, this,
 	                      &AAAPlayerController::OnInputHeavyAttackStarted);
+
+#if !UE_BUILD_SHIPPING
+	SetupFeelDebugInput();
+#endif
 }
 
 void AAAPlayerController::OnPossess(APawn* InPawn)
@@ -268,3 +276,100 @@ void AAAPlayerController::ScheduleDrainNextTick()
 		GetWorld()->GetTimerManager().SetTimerForNextTick(this, &AAAPlayerController::TryConsumeBuffer);
 	}
 }
+
+#if !UE_BUILD_SHIPPING
+static void ToggleBoolCVar(const TCHAR* Name)
+{
+	if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(Name))
+	{
+		Var->Set(Var->GetInt() == 0 ? TEXT("1") : TEXT("0"), ECVF_SetByConsole);
+	}
+}
+
+static bool GetBoolCVar(const TCHAR* Name)
+{
+	const IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(Name);
+	return Var && Var->GetInt() != 0;
+}
+
+void AAAPlayerController::SetupFeelDebugInput()
+{
+	if (InputComponent == nullptr)
+	{
+		return;
+	}
+
+	// EnhancedInput과 별개의 레거시 BindKey라 별도 IA 에셋 없이 바로 동작(셰이핑 빌드에서는 컴파일 제외).
+	InputComponent->BindKey(EKeys::One,   IE_Pressed, this, &AAAPlayerController::OnToggleFeelMaster);
+	InputComponent->BindKey(EKeys::Two,   IE_Pressed, this, &AAAPlayerController::OnToggleFeelHitStop);
+	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AAAPlayerController::OnToggleFeelHitFX);
+	InputComponent->BindKey(EKeys::Four,  IE_Pressed, this, &AAAPlayerController::OnToggleFeelFlash);
+	InputComponent->BindKey(EKeys::Five,  IE_Pressed, this, &AAAPlayerController::OnToggleFeelCameraShake);
+	InputComponent->BindKey(EKeys::Six,   IE_Pressed, this, &AAAPlayerController::OnToggleFeelMeshShake);
+	InputComponent->BindKey(EKeys::Seven, IE_Pressed, this, &AAAPlayerController::OnToggleMeleeTraceDebug);
+	InputComponent->BindKey(EKeys::Eight, IE_Pressed, this, &AAAPlayerController::OnToggleAutoTargetDebug);
+	InputComponent->BindKey(EKeys::Zero,  IE_Pressed, this, &AAAPlayerController::OnToggleFeelOverlay);
+}
+
+void AAAPlayerController::OnToggleFeelMaster()      { UACCombatFeelSettings::ToggleFeelMaster(); }
+void AAAPlayerController::OnToggleFeelHitStop()     { UACCombatFeelSettings::ToggleFeelLayer(EACFeelLayer::HitStop); }
+void AAAPlayerController::OnToggleFeelHitFX()       { UACCombatFeelSettings::ToggleFeelLayer(EACFeelLayer::HitFX); }
+void AAAPlayerController::OnToggleFeelFlash()       { UACCombatFeelSettings::ToggleFeelLayer(EACFeelLayer::Flash); }
+void AAAPlayerController::OnToggleFeelCameraShake() { UACCombatFeelSettings::ToggleFeelLayer(EACFeelLayer::CameraShake); }
+void AAAPlayerController::OnToggleFeelMeshShake()   { UACCombatFeelSettings::ToggleFeelLayer(EACFeelLayer::MeshShake); }
+void AAAPlayerController::OnToggleFeelOverlay()     { bShowFeelOverlay = !bShowFeelOverlay; }
+void AAAPlayerController::OnToggleMeleeTraceDebug() { ToggleBoolCVar(TEXT("MeleeTrace.ShouldDrawDebug")); }
+void AAAPlayerController::OnToggleAutoTargetDebug() { ToggleBoolCVar(TEXT("AA.AutoTarget.Debug")); }
+
+void AAAPlayerController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (IsLocalPlayerController())
+	{
+		DrawFeelDebugOverlay();
+	}
+}
+
+void AAAPlayerController::DrawFeelDebugOverlay() const
+{
+	if (bShowFeelOverlay == false || GEngine == nullptr)
+	{
+		return;
+	}
+
+	const bool bMaster = UACCombatFeelSettings::GetFeelMaster();
+
+	// 슬롯 키가 작을수록 위. 2~6 레이어 / 7701 마스터 / 7700 헤더.
+	auto DrawLayer = [&](int32 Slot, int32 KeyNum, EACFeelLayer Layer)
+	{
+		const bool bRaw = UACCombatFeelSettings::GetFeelLayerRaw(Layer);
+		const FColor Color = bMaster == false ? FColor(120, 120, 120) : (bRaw ? FColor::Green : FColor::Red);
+		GEngine->AddOnScreenDebugMessage(7700 + Slot, 0.f, Color,
+			FString::Printf(TEXT("  [%d] %-11s : %s"), KeyNum,
+				UACCombatFeelSettings::GetFeelLayerLabel(Layer), bRaw ? TEXT("ON") : TEXT("OFF")));
+	};
+
+	DrawLayer(6, 6, EACFeelLayer::MeshShake);
+	DrawLayer(5, 5, EACFeelLayer::CameraShake);
+	DrawLayer(4, 4, EACFeelLayer::Flash);
+	DrawLayer(3, 3, EACFeelLayer::HitFX);
+	DrawLayer(2, 2, EACFeelLayer::HitStop);
+
+	GEngine->AddOnScreenDebugMessage(7701, 0.f, bMaster ? FColor::Green : FColor::Red,
+		FString::Printf(TEXT("  [1] %-11s : %s"), TEXT("Master"), bMaster ? TEXT("ON") : TEXT("OFF")));
+	GEngine->AddOnScreenDebugMessage(7700, 0.f, FColor::Cyan,
+		TEXT("== 연출 토글  (1~6: 토글 / 0: 표시 on-off) =="));
+
+	// 디버그 시각화(개발용) — MeleeTrace/AutoTarget은 ENABLE_DRAW_DEBUG 빌드에서만 실제 그려진다.
+	auto DrawCVarRow = [&](int32 Slot, int32 KeyNum, const TCHAR* Label, const TCHAR* CVarName)
+	{
+		const bool bOn = GetBoolCVar(CVarName);
+		GEngine->AddOnScreenDebugMessage(7700 + Slot, 0.f, bOn ? FColor::Green : FColor::Red,
+			FString::Printf(TEXT("  [%d] %-11s : %s"), KeyNum, Label, bOn ? TEXT("ON") : TEXT("OFF")));
+	};
+	DrawCVarRow(12, 8, TEXT("AutoTarget"), TEXT("AA.AutoTarget.Debug"));
+	DrawCVarRow(11, 7, TEXT("MeleeTrace"), TEXT("MeleeTrace.ShouldDrawDebug"));
+	GEngine->AddOnScreenDebugMessage(7710, 0.f, FColor::Cyan, TEXT("-- 디버그 표시 (7~8) --"));
+}
+#endif
