@@ -153,6 +153,11 @@ int32 UACHitReactionComponent::PlayHitReactMontage()
 
 void UACHitReactionComponent::SpawnHitFX(const FACHitEffect& Effect, const FVector& Direction, const FVector& HitLocation, int32 MontageInstanceID)
 {
+	if (UACCombatFeelSettings::IsFeelLayerEnabled(EACFeelLayer::HitFX) == false)
+	{
+		return;
+	}
+
 	// 히트 위치에 비부착 스폰(때린 쪽을 향함) 후 피격 몽타주 컨트롤러에 등록 → 히트스탑 연동.
 	if (Effect.HitNiagara == nullptr)
 	{
@@ -261,6 +266,11 @@ void UACHitReactionComponent::CancelReact()
 
 void UACHitReactionComponent::RequestHitStop(float Scale, float Duration, int32 MontageInstanceID)
 {
+	if (UACCombatFeelSettings::IsFeelLayerEnabled(EACFeelLayer::HitStop) == false)
+	{
+		return;
+	}
+
 	if (Duration <= 0.f || OwnerCharacter == nullptr || SkeletalMesh == nullptr)
 	{
 		return;
@@ -337,6 +347,11 @@ void UACHitReactionComponent::UpdateMeshShake()
 
 void UACHitReactionComponent::StartMeshShake(float Amplitude, int32 SampleCount, float Duration, const FVector& Direction)
 {
+	if (UACCombatFeelSettings::IsFeelLayerEnabled(EACFeelLayer::MeshShake) == false)
+	{
+		return;
+	}
+
 	if (SkeletalMesh == nullptr || Amplitude <= 0.f || Duration <= 0.f || SampleCount <= 0)
 	{
 		return;
@@ -385,6 +400,11 @@ void UACHitReactionComponent::StopMeshShake()
 void UACHitReactionComponent::StartHitFlash()
 {
 	if (OwnerCharacter == nullptr)
+	{
+		return;
+	}
+
+	if (UACCombatFeelSettings::IsFeelLayerEnabled(EACFeelLayer::Flash) == false)
 	{
 		return;
 	}

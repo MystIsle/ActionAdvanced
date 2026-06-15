@@ -22,6 +22,7 @@
 #include "GenericTeamAgentInterface.h"
 #include "ACHitReactionComponent.h"
 #include "ACHittable.h"
+#include "ACCombatFeelSettings.h"
 
 #if ENABLE_DRAW_DEBUG
 #include "DrawDebugHelpers.h"
@@ -209,7 +210,7 @@ void UACActionInstance::OnMeleeTraceHit(UMeleeTraceComponent* TraceComp, AActor*
 
 	// 공격자가 플레이어면 히트 확정 카메라 셰이크(AI는 PC 없어 자동 스킵).
 	// PlaySpace=UserDefined + 공격 방향(Direction)으로 정렬 → 방향성 정도는 에셋이 결정.
-	if (CurrentHitEffect.HitCameraShake)
+	if (CurrentHitEffect.HitCameraShake && UACCombatFeelSettings::IsFeelLayerEnabled(EACFeelLayer::CameraShake))
 	{
 		if (APlayerController* PC = Owner->GetController<APlayerController>())
 		{

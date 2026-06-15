@@ -93,4 +93,25 @@ protected:
 	TObjectPtr<UInputAction> BufferedInput;
 
 	double BufferedTime = -1.0;
+
+#if !UE_BUILD_SHIPPING
+public:
+	virtual void Tick(float DeltaTime) override;
+
+protected:
+	// 강의 데모용 연출 토글 디버그(키 1~6 토글, 0 오버레이 표시). AA.Feel.* CVar를 직접 토글.
+	void SetupFeelDebugInput();
+	void OnToggleFeelMaster();
+	void OnToggleFeelHitStop();
+	void OnToggleFeelHitFX();
+	void OnToggleFeelFlash();
+	void OnToggleFeelCameraShake();
+	void OnToggleFeelMeshShake();
+	void OnToggleFeelOverlay();
+	void OnToggleMeleeTraceDebug();
+	void OnToggleAutoTargetDebug();
+	void DrawFeelDebugOverlay() const;
+
+	bool bShowFeelOverlay = true;
+#endif
 };
